@@ -5,23 +5,24 @@ import android.util.Log;
 import java.io.IOException;
 
 import nl.vu.cs.cn.IP.IpAddress;
+import nl.vu.cs.cn.tcp.OnSegmentArriveListener;
+import nl.vu.cs.cn.tcp.OnTimeoutListener;
 import nl.vu.cs.cn.tcp.Segment;
+import nl.vu.cs.cn.tcp.SegmentReceiver;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 /**
- * This class represents a TCP stack. It should be built on top of the IP stack
- * which is bound to a given IP address.
+ * This class represents a TCP stack.
  */
-public class TCP {
+public class TCP implements OnSegmentArriveListener, OnTimeoutListener {
 
     private static final String TAG = "TCP";
+    private static final short CLIENT_LOCAL_PORT = 3110;    // local port used by client
 
-    private static final short LOCAL_PORT = 3110;
-
-    /** The underlying IP stack for this TCP stack. */
     private IP ip;
     private TransmissionControlBlock tcb;
     private boolean sendIssued;
+    private SegmentReceiver segmentReceiver;
 
 
     /**
@@ -34,6 +35,10 @@ public class TCP {
      */
     public TCP(int address) throws IOException {
         ip = new IP(address);
+
+        // start new thread to receive messages
+        segmentReceiver = new SegmentReceiver(this, ip);
+        segmentReceiver.run();
     }
 
     /**
@@ -133,17 +138,17 @@ public class TCP {
         }
     }
 
-    public void onSegmentArrive(Segment segment, IpAddress source){
+    public void onSegmentArrive(Segment segment){
         switch(tcb.getState()){
             case CLOSED:
                 // Normally connection would be RESET. However, that is not supported in this implementation.
                 Log.v(TAG, "onSegmentArrive(): segment is dropped. Connection does not exist");
                 return;
             case LISTEN:
-                handleSegmentArriveInListenState(segment, source);
+                handleSegmentArriveInListenState(segment);
                 return;
             case SYN_SENT:
-                handleSegmentArriveInSynSentState(segment, source);
+                handleSegmentArriveInSynSentState(segment);
                 return;
             default:
                 // first check sequence number
@@ -170,7 +175,7 @@ public class TCP {
                     Log.w(TAG, "onSegmentArrive(): unexpected segment without ACK. Dropping segment");
                     return;
                 } else {
-                    if(!handleACKArriveInDefaultState(segment, source)){
+                    if(!handleACKArriveInDefaultState(segment)){
                         return;
                     }
                 }
@@ -178,16 +183,16 @@ public class TCP {
                 // sixth, check the URG bit (not supported in this implementation)
 
                 // seventh, process the segment text
-                handleSegmentText(segment, source);
+                handleSegmentText(segment);
 
                 // eigth, check the FIN bit
                 if(segment.isFin()){
-                    handleSegmentFIN(segment, source);
+                    handleSegmentFIN(segment);
                 }
         }
     }
 
-    private void handleSegmentArriveInListenState(Segment segment, IpAddress source){
+    private void handleSegmentArriveInListenState(Segment segment){
         if(segment.isRst()){
             // An incoming RST should be ignored.
             Log.v(TAG, "onSegmentArrive(RST): state is LISTEN, RST is ignored");
@@ -210,7 +215,7 @@ public class TCP {
 
             tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
 
-            tcb.setForeignSocketInfo(source, segment.getSourcePort());
+            tcb.setForeignSocketInfo(segment.getSourceAddr(), segment.getSourcePort());
         } else {
             // Any control- or text-bearing segment must have an ack, and would be
             // handled by the isAck() check. This situation is unexpected, but can be ignored.
@@ -218,7 +223,7 @@ public class TCP {
         }
     }
 
-    private void handleSegmentArriveInSynSentState(Segment segment, IpAddress source){
+    private void handleSegmentArriveInSynSentState(Segment segment){
         if(segment.isAck()){
             if(segment.getAck() <= tcb.getInitialSendSequenceNumber() ||
                     segment.getAck() > tcb.getSendNext()){
@@ -271,7 +276,7 @@ public class TCP {
      * @param source
      * @return true if and only if the processing of the segment should continue
      */
-    private boolean handleACKArriveInDefaultState(Segment segment, IpAddress source){
+    private boolean handleACKArriveInDefaultState(Segment segment){
         if(tcb.getState() == TransmissionControlBlock.State.SYN_RECEIVED){
             if(tcb.getSendUnacknowledged() <= segment.getAck() &&
                     segment.getAck() <= tcb.getSendNext()){
@@ -330,7 +335,7 @@ public class TCP {
         return true;
     }
 
-    private void handleSegmentText(Segment segment, IpAddress source){
+    private void handleSegmentText(Segment segment){
         switch(tcb.getState()){
             case ESTABLISHED:
             case FIN_WAIT_1:
@@ -351,7 +356,7 @@ public class TCP {
         }
     }
 
-    private void handleSegmentFIN(Segment segment, IpAddress source){
+    private void handleSegmentFIN(Segment segment){
         switch(tcb.getState()){
             // dont handle FIN in specific states
             case CLOSED:
@@ -394,7 +399,7 @@ public class TCP {
         }
     }
 
-    private void onUserTimeout(){
+    public void onUserTimeout(){
         /*
          * TODO:
          * - flush all queus
@@ -406,7 +411,7 @@ public class TCP {
         tcb.enterState(TransmissionControlBlock.State.CLOSED);
     }
 
-    private void onRetransmissionTimeout(){
+    public void onRetransmissionTimeout(){
         /*
          * TODO:
          * - resend segment at front of retransmission queue again
@@ -414,7 +419,7 @@ public class TCP {
          */
     }
 
-    private void onTimeWaitTimeout(){
+    public void onTimeWaitTimeout(){
         tcb.enterState(TransmissionControlBlock.State.CLOSED);
     }
 
@@ -445,8 +450,6 @@ public class TCP {
     }
 
 
-
-
     /**
      * This class represents a TCP socket.
      *
@@ -458,7 +461,7 @@ public class TCP {
          * local socket information.
          */
         private Socket() {
-            tcb = new TransmissionControlBlock(ip.getLocalAddress(), LOCAL_PORT);
+            tcb = new TransmissionControlBlock(ip.getLocalAddress(), CLIENT_LOCAL_PORT);
         }
 
         /**
