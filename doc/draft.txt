@@ -1,0 +1,22 @@
+
+Connect()
+- does not set USER TIMEOUT. Not used in this implementation.
+- int tcb we don't keep track of send window, send urgent pointer info (urgent pointer not supported, window is one)
+
+in write()
+- adding to queue will always succeed, so will never show error "insufficient resources"
+
+in read()
+- no need to notify user of urgent data or to mark push (both not supported)
+
+
+
+in onSegmentArrive()
+- no need to handle state == CLOSED because we don't support reset
+- in state == LISTEN no need to check for reset
+-
+
+general:
+- no need to implement abort call; not supported
+- no security implemented
+- precedence not check as window is max size of one packet
