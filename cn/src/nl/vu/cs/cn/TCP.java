@@ -21,7 +21,9 @@ public class TCP {
 
     private String TAG = "TCP";
 
-    private IP ip;
+    // protected ip stack so test cases can override
+    protected IP ip;
+
     private TransmissionControlBlock tcb;
     private boolean sendIssued;
 
@@ -39,7 +41,6 @@ public class TCP {
      */
     public TCP(int address) throws IOException {
         ip = new IP(address);
-        tcb = new TransmissionControlBlock(ip);
     }
 
     /**
@@ -47,7 +48,7 @@ public class TCP {
      */
     public Socket socket() {
         TAG += " [client]";
-        tcb.setIsServer(false);
+        tcb = new TransmissionControlBlock(ip, false);
 
         initSegmentReceiver();
 
@@ -60,7 +61,7 @@ public class TCP {
      */
     public Socket socket(int port) {
         TAG += " [server]";
-        tcb.setIsServer(true);
+        tcb = new TransmissionControlBlock(ip, true);
 
         initSegmentReceiver();
 

@@ -80,7 +80,7 @@ public class TransmissionControlBlock {
      * Create a new transmission control block (TCB) to hold connection state information.
      * When this method finishes the state is set to CLOSED.
      */
-    public TransmissionControlBlock(IP ip) {
+    public TransmissionControlBlock(IP ip, boolean isServer) {
         iss = getInitialSendSequenceNumber();
         state = State.CLOSED;
         
@@ -89,6 +89,10 @@ public class TransmissionControlBlock {
         processingQueue = new ConcurrentLinkedQueue<Byte>();
 
         timeoutHandler = new TimeoutHandler(ip, this);
+
+        // set isServer, used to improved logging statements
+        this.isServer = isServer;
+        TAG += (isServer) ? " [server]" : " [client]";
 
         // implementation specific settings: window is always max size of one packet
         snd_wnd = MAX_SEGMENT_SIZE;
@@ -146,11 +150,6 @@ public class TransmissionControlBlock {
 
     public boolean isServer() {
         return isServer;
-    }
-
-    public void setIsServer(boolean isServer) {
-        this.isServer = isServer;
-        TAG += (isServer) ? " [server]" : " [client]";
     }
 
     /**
