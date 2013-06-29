@@ -15,7 +15,7 @@ public abstract class SegmentUtil {
                 tcb.getLocalport(), tcb.getForeignPort(),
                 seq);
 
-        segment.setControlBits(Segment.SYN_MASK);
+        segment.setIsSyn(true);
         return segment;
     }
 
@@ -30,7 +30,7 @@ public abstract class SegmentUtil {
                 tcb.getLocalport(), tcb.getForeignPort(),
                 seq, ack);
 
-        segment.setControlBits(Segment.SYN_MASK);
+        segment.setIsSyn(true);
         // isAck is automatically set because we passed an ack num to Segment
 
         return segment;
