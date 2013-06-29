@@ -13,7 +13,7 @@ public abstract class SegmentUtil {
         Segment segment = new Segment(
                 tcb.getLocalAddr(), tcb.getForeignAddr(),
                 tcb.getLocalport(), tcb.getForeignPort(),
-                seq);
+                seq, tcb.getSendWindow());
 
         segment.setIsSyn(true);
         return segment;
@@ -25,12 +25,24 @@ public abstract class SegmentUtil {
      * @return
      */
     public static Segment getSYNACKPacket(TransmissionControlBlock tcb, int seq, int ack){
+        Segment segment = getPacket(tcb, seq, ack);
+        segment.setIsSyn(true);
+        // isAck is automatically set inside getPacket()
+
+        return segment;
+    }
+
+    /**
+     * Construct an ACK packet possibly containing data
+     * @param tcb
+     * @return
+     */
+    public static Segment getPacket(TransmissionControlBlock tcb, int seq, int ack){
         Segment segment = new Segment(
                 tcb.getLocalAddr(), tcb.getForeignAddr(),
                 tcb.getLocalport(), tcb.getForeignPort(),
-                seq, ack);
+                seq, tcb.getSendWindow(), ack);
 
-        segment.setIsSyn(true);
         // isAck is automatically set because we passed an ack num to Segment
 
         return segment;

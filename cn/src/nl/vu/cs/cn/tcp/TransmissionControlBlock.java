@@ -20,7 +20,9 @@ import nl.vu.cs.cn.tcp.timeout.TimeoutHandler;
 public class TransmissionControlBlock {
 
     private static final int RETRANSMIT_TIMEOUT_SEC = 1;    // number of time before retransmit
-    public static final int MAX_RETRANSMITS = 10;          // maximum number of retransmits
+    public static final int MAX_RETRANSMITS = 10;           // maximum number of retransmits
+    private static final short IP_HEADER_SIZE = 20;           // size of IP header in bytes
+    private static final short MAX_SEGMENT_SIZE = 8 * 1024 - IP_HEADER_SIZE;    // maximum packet size in bytes
 
     private String TAG = "TCB";
 
@@ -53,12 +55,12 @@ public class TransmissionControlBlock {
     // send sequence variables (note that window and urgent pointer info is not used)
     private int snd_una;        // send - unacknowledged sequence number
     private int snd_nxt;        // send - next sequence number
-    private int snd_wnd;        // send - window (offset of snd_una)
+    private short snd_wnd;        // send - window (offset of snd_una)
 
 
     // receive sequence variables
     private int rcv_nxt;        // receive - next sequence number
-    private int rcv_wnd;        // receive - window
+    private short rcv_wnd;        // receive - window
 
     private ConcurrentHashMap<RetransmissionSegment, ScheduledFuture> retransmissionMap;
     private ConcurrentLinkedQueue<Byte> transmissionQueue;
@@ -79,6 +81,10 @@ public class TransmissionControlBlock {
         processingQueue = new ConcurrentLinkedQueue<Byte>();
 
         timeoutHandler = new TimeoutHandler(ip, this);
+
+        // implementation specific settings: window is always max size of one packet
+        snd_wnd = MAX_SEGMENT_SIZE;
+        rcv_wnd = MAX_SEGMENT_SIZE;
     }
 
     /**
@@ -231,8 +237,12 @@ public class TransmissionControlBlock {
      * @param snd_wnd
      * @return
      */
-    public void setSendWindow(int snd_wnd){
+    public void setSendWindow(short snd_wnd){
         this.snd_wnd = snd_wnd;
+    }
+
+    public short getSendWindow(){
+        return snd_wnd;
     }
 
     /**

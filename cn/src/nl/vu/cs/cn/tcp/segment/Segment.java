@@ -47,8 +47,9 @@ public class Segment {
 
     private int seq;    // segment sequence number
     private int ack;    // segment acknowledgement number
-    private int len;    // segment length (both header + data)
-    private short wnd;    // segment window
+    private short wnd;  // segment window
+
+    private int len = -1;    // segment length data + syn + fin
 
     // Note: we omit variables urgent pointer and precendence value because
     // those are unsupported in this implementation.
@@ -67,8 +68,8 @@ public class Segment {
      * @param destinationPort
      * @param seq
      */
-    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq) {
-        this(sourceAddr, destinationAddr, sourcePort, destinationPort, seq, -1);
+    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq, short wnd) {
+        this(sourceAddr, destinationAddr, sourcePort, destinationPort, seq, wnd, -1);
     }
 
     /**
@@ -80,19 +81,22 @@ public class Segment {
      * @param seq
      * @param ack
      */
-    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq, int ack) {
+    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq, short wnd, int ack) {
         this.sourceAddr = sourceAddr;
         this.destinationAddr = destinationAddr;
         this.sourcePort = sourcePort;
         this.destinationPort = destinationPort;
         this.seq = seq;
+        this.wnd = wnd;
 
         if(ack > -1){
             this.ack = ack;
             isAck = true;
         }
 
-        // implementation specific: PUSH is set on all segments, RESET is not supported and set to false
+        // implementation specific:
+
+        // PUSH is set on all segments, RESET is not supported and set to false
         isPsh = true;
         isRst = false;
     }
@@ -177,7 +181,17 @@ public class Segment {
         return ack;
     }
 
+    /**
+     * Get the length of the segment, which is the length of the data plus
+     * the length of control bits that take up space (SYN and FIN)
+     * @return
+     */
     public int getLen() {
+        if(len == -1){
+            len = getDataLength();
+            if(isSyn) len += 1;
+            if(isFin) len += 1;
+        }
         return len;
     }
 
