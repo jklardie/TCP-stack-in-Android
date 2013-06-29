@@ -2,6 +2,10 @@ package nl.vu.cs.cn.tcp.segment;
 
 import android.util.Log;
 
+import java.io.IOException;
+
+import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.IPUtil;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public class SegmentHandler implements OnSegmentArriveListener {
@@ -9,9 +13,11 @@ public class SegmentHandler implements OnSegmentArriveListener {
     private String TAG = "SegmentHandler";
 
     private final TransmissionControlBlock tcb;
+    private final IP ip;
 
-    public SegmentHandler(TransmissionControlBlock tcb){
+    public SegmentHandler(TransmissionControlBlock tcb, IP ip){
         this.tcb = tcb;
+        this.ip = ip;
         TAG += (tcb.isServer()) ? " [server]" : " [client]";
     }
 
@@ -80,21 +86,36 @@ public class SegmentHandler implements OnSegmentArriveListener {
             // Normally connection would be RESET. However, that is not supported in this implementation.
             Log.v(TAG, "onSegmentArrive(): state is LISTEN, unexpected ACK (ignored)");
         } else if(segment.isSyn()){
+            Log.v(TAG, "onSegmentArrive(): Received SYN " + segment.getSeq());
+            tcb.setForeignSocketInfo(segment.getSourceAddr(), segment.getSourcePort());
+
             // Normally security would be checked here. However, that is not supported in this implementation.
             // Also, precedence not checked here for the same reason.
+
             tcb.setReceiveNext(segment.getSeq()+1);
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
-            // TODO: queue any other control or text for processing later.
+            // TODO: queue any other control or text for processing later (actually, can SYN contain data?).
 
-            // TODO: send SYN segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
+            // Send SYN segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
+            int iss = tcb.getInitialSendSequenceNumber();
+            Segment outSegment = SegmentUtil.getSYNACKPacket(tcb, iss, tcb.getReceiveNext());
+            IP.Packet packet = IPUtil.getPacket(outSegment);
+            try {
+                Log.v(TAG, "Sending SYN ACK " + outSegment.getSeq());
+                ip.ip_send(packet);
+                tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+            } catch (IOException e) {
+                Log.e(TAG, "Error while sending SYN ACK", e);
 
-            tcb.setSendNext(tcb.getInitialSendSequenceNumber()+1);
-            tcb.setSendUnacknowledged(tcb.getInitialSendSequenceNumber());
+                // TODO: howto handle this?
+                return;
+            }
+
+            tcb.setSendNext(iss+1);
+            tcb.setSendUnacknowledged(iss);
 
             tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
-
-            tcb.setForeignSocketInfo(segment.getSourceAddr(), segment.getSourcePort());
         } else {
             // Any control- or text-bearing segment must have an ack, and would be
             // handled by the isAck() check. This situation is unexpected, but can be ignored.

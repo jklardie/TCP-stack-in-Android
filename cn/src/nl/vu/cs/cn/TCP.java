@@ -9,7 +9,6 @@ import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
 import nl.vu.cs.cn.tcp.segment.Segment;
 import nl.vu.cs.cn.tcp.segment.SegmentHandler;
 import nl.vu.cs.cn.tcp.segment.SegmentReceiver;
-import nl.vu.cs.cn.tcp.TimeoutHandler;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 
@@ -72,7 +71,7 @@ public class TCP {
      * Create a segment handler, and start new thread to receive messages
      */
     private void initSegmentReceiver(){
-        segmentHandler = new SegmentHandler(tcb);
+        segmentHandler = new SegmentHandler(tcb, ip);
         segmentReceiver = new SegmentReceiver(segmentHandler, ip);
         segmentReceiver.run();
     }
@@ -222,7 +221,7 @@ public class TCP {
             Segment segment = SegmentUtil.getSYNPacket(tcb, iss);
             IP.Packet packet = IPUtil.getPacket(segment);
             try {
-                Log.v(TAG, "Sending SYN");
+                Log.v(TAG, "Sending SYN " + segment.getSeq());
                 ip.ip_send(packet);
                 tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
             } catch (IOException e) {
@@ -234,6 +233,8 @@ public class TCP {
             tcb.setSendNext(iss+1);
             tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
 
+            // TODO wait for ESTABLISHED state and return
+
             return true;
         }
 
@@ -244,6 +245,7 @@ public class TCP {
         public void accept() {
             tcb.enterState(TransmissionControlBlock.State.LISTEN);
 
+            // TODO wait for ESTABLISHED state and return
 
         }
 
