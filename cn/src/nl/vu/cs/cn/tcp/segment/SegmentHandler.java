@@ -96,7 +96,9 @@ public class SegmentHandler implements OnSegmentArriveListener {
             // Normally security would be checked here. However, that is not supported in this implementation.
             // Also, precedence not checked here for the same reason.
 
-            tcb.setReceiveNext(segment.getSeq()+1);
+            // advance receive next sequence number by the length of this segment,
+            // which should be one because it only has the SYN control bit
+            tcb.advanceReceiveNext(segment.getLen());
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
             // TODO: queue any other control or text for processing later (actually, can SYN contain data?).
@@ -116,7 +118,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 return;
             }
 
-            tcb.setSendNext(iss+1);
+            tcb.advanceSendNext(segment.getLen());
             tcb.setSendUnacknowledged(iss);
 
             tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
@@ -156,7 +158,9 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
         // Fourthly, check syn
         if(segment.isSyn()){
-            tcb.setReceiveNext(segment.getSeq()+1);
+            // advance receive next sequence number by the length of this segment,
+            // which should be one because it only has the SYN control bit
+            tcb.advanceReceiveNext(segment.getLen());
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
             tcb.setSendUnacknowledged(segment.getAck());
@@ -252,8 +256,11 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 tcb.queueDataForProcessing(segment.getData(), 0, segment.getDataLength());
                 // TODO: notify threads waiting for data
 
+                // update receive next sequence number to RCV.NXT + segment.getLen()
+                tcb.advanceReceiveNext(segment.getLen());
+
                 // TODO: send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
-                // TODO: update receive next sequence number to.. something
+
                 return;
             case CLOSE_WAIT:
             case CLOSING:
@@ -277,7 +284,11 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
         // TODO: signal user "connection closing"
         // TODO: return all pending receives with "connection closing"
-        // TODO: advance RCV.NXT over the FIN
+
+        // advance receive next sequence number by the length of this segment
+        tcb.advanceReceiveNext(segment.getLen());
+
+        // TODO: send ack for FIN
 
         switch(tcb.getState()){
             case SYN_RECEIVED:

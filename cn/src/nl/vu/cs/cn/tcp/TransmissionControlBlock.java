@@ -217,11 +217,11 @@ public class TransmissionControlBlock {
     }
 
     /**
-     * Set send next sequence number.
-     * @param snd_nxt
+     * Advance send next sequence number by len.
+     * @param len
      */
-    public void setSendNext(int snd_nxt){
-        this.snd_nxt = snd_nxt;
+    public void advanceSendNext(int len){
+        this.snd_nxt += len;
     }
 
     /**
@@ -246,11 +246,11 @@ public class TransmissionControlBlock {
     }
 
     /**
-     * Set receive next sequence number.
-     * @param rcv_nxt
+     * Advance receive next sequence number by len
+     * @param len
      */
-    public void setReceiveNext(int rcv_nxt){
-        this.rcv_nxt = rcv_nxt;
+    public void advanceReceiveNext(int len){
+        this.rcv_nxt += len;
     }
 
     /**
