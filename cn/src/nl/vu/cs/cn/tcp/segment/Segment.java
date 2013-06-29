@@ -1,8 +1,9 @@
-package nl.vu.cs.cn.tcp;
+package nl.vu.cs.cn.tcp.segment;
 
 import java.nio.ByteBuffer;
 
 import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.tcp.Util;
 
 /**
  * A TCP segment which contains a header and a data part.

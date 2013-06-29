@@ -1,6 +1,4 @@
-package nl.vu.cs.cn.tcp;
-
-import nl.vu.cs.cn.IP;
+package nl.vu.cs.cn.tcp.segment;
 
 public interface OnSegmentArriveListener {
 

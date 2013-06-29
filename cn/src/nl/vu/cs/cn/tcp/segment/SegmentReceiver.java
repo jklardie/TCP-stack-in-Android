@@ -1,4 +1,4 @@
-package nl.vu.cs.cn.tcp;
+package nl.vu.cs.cn.tcp.segment;
 
 
 import android.util.Log;

@@ -5,9 +5,8 @@ import android.util.Log;
 import java.io.IOException;
 
 import nl.vu.cs.cn.IP.IpAddress;
-import nl.vu.cs.cn.tcp.OnTimeoutListener;
-import nl.vu.cs.cn.tcp.SegmentHandler;
-import nl.vu.cs.cn.tcp.SegmentReceiver;
+import nl.vu.cs.cn.tcp.segment.SegmentHandler;
+import nl.vu.cs.cn.tcp.segment.SegmentReceiver;
 import nl.vu.cs.cn.tcp.TimeoutHandler;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
