@@ -379,7 +379,14 @@ public class TransmissionControlBlock {
      * @return true if and only if the segment existed (and was removed)
      */
     public boolean removeFromRetransmissionQueue(RetransmissionSegment retransmissionSegment) {
-        return (retransmissionMap.remove(retransmissionSegment) != null);
+        Log.v(TAG, "Removing segment " + retransmissionSegment.getSegment().getSeq() + " from retransmission queue");
+        ScheduledFuture scheduledFuture = retransmissionMap.remove(retransmissionSegment);
+
+        if(scheduledFuture != null){
+            // Cancel scheduled task (the call to retransmit)
+            scheduledFuture.cancel(true);
+        }
+        return false;
     }
 
 }
