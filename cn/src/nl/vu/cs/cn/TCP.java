@@ -38,6 +38,7 @@ public class TCP {
      */
     public TCP(int address) throws IOException {
         ip = new IP(address);
+        tcb = new TransmissionControlBlock();
 
         // create timeout handler
         timeoutHandler = new TimeoutHandler(tcb);
@@ -49,7 +50,7 @@ public class TCP {
     }
 
     /**
-     * @return a new socket for this stack
+     * @return a new client socket for this stack
      */
     public Socket socket() {
         return new Socket();
@@ -146,6 +147,14 @@ public class TCP {
     }
 
     /**
+     * Get the state the TCP stack is currently in.
+     * @return
+     */
+    protected TransmissionControlBlock.State getState(){
+        return tcb.getState();
+    }
+
+    /**
      * This class represents a TCP socket.
      *
      */
@@ -199,7 +208,7 @@ public class TCP {
             tcb.setSendNext(tcb.getInitialSendSequenceNumber()+1);
             tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
 
-            return false;
+            return true;
         }
 
         /**
