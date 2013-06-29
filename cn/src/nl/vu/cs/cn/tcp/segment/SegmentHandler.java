@@ -169,8 +169,23 @@ public class SegmentHandler implements OnSegmentArriveListener {
             if(tcb.getSendUnacknowledged() > tcb.getInitialSendSequenceNumber()){
                 // our SYN has been ACKed
                 tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
-                // TODO: send ACK segment <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
-                // Data or controls which were queued for transmission may be included
+
+                // TODO: add data that has been queued for transmission here
+
+                // Send ACK segment <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                IP.Packet packet = IPUtil.getPacket(outSegment);
+                try {
+                    Log.v(TAG, "Sending: " + outSegment.toString());
+                    ip.ip_send(packet);
+                    tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+                } catch (IOException e) {
+                    Log.e(TAG, "Error while sending SYN ACK", e);
+
+                    // TODO: howto handle this?
+                    return;
+                }
+
             } else {
                 tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
                 // TODO: send SYN ACK segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
