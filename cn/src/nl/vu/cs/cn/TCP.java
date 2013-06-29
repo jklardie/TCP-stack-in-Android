@@ -238,9 +238,12 @@ public class TCP {
                 tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
             }
 
-            // TODO wait for ESTABLISHED state and return
+            // Wait for either the ESTABLISHED state (success) or the CLOSED state (error)
+            Log.v(TAG, "connect(): waiting until state becomes ESTABLISHED or CLOSED");
+            tcb.waitForStates(TransmissionControlBlock.State.ESTABLISHED,
+                    TransmissionControlBlock.State.CLOSED);
 
-            return true;
+            return tcb.getState() == TransmissionControlBlock.State.ESTABLISHED;
         }
 
         /**
@@ -250,8 +253,8 @@ public class TCP {
         public void accept() {
             tcb.enterState(TransmissionControlBlock.State.LISTEN);
 
-            // TODO wait for ESTABLISHED state and return
-
+            Log.v(TAG, "accept(): waiting until state becomes ESTABLISHED");
+            tcb.waitForStates(TransmissionControlBlock.State.ESTABLISHED);
         }
 
         /**
