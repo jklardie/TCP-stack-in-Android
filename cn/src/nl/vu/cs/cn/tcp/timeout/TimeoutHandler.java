@@ -1,4 +1,4 @@
-package nl.vu.cs.cn.tcp;
+package nl.vu.cs.cn.tcp.timeout;
 
 
 import android.util.Log;
@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.IPUtil;
+import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
 
 public class TimeoutHandler implements OnTimeoutListener {

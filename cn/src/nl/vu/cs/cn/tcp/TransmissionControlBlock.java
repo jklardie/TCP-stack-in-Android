@@ -1,8 +1,5 @@
 package nl.vu.cs.cn.tcp;
 
-import android.util.Log;
-
-import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -12,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
-import nl.vu.cs.cn.tcp.segment.Segment;
+import nl.vu.cs.cn.tcp.timeout.TimeoutHandler;
 
 /**
  * The Transmission Control Block in TCP keeps track of the state of a connection,
