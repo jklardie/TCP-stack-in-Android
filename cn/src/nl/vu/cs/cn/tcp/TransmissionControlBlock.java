@@ -120,7 +120,12 @@ public class TransmissionControlBlock {
      * @return
      */
     public State getState(){
-        return state;
+        lock.lock();
+        try {
+            return state;
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -407,7 +412,7 @@ public class TransmissionControlBlock {
     public void removeFromRetransmissionQueue(int ack){
         for(RetransmissionSegment segment : retransmissionMap.keySet()){
             if(segment.getSegment().getSeq() < ack){
-                retransmissionMap.remove(segment);
+                retransmissionMap.remove(segment).cancel(true);
             }
         }
     }

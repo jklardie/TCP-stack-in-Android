@@ -21,10 +21,10 @@ public class TCP {
 
     private String TAG = "TCP";
 
-    // protected ip stack so test cases can override
+    // protected ip stack and tcb so test cases can use it
     protected IP ip;
+    protected TransmissionControlBlock tcb;
 
-    private TransmissionControlBlock tcb;
     private boolean sendIssued;
 
     private SegmentReceiver segmentReceiver;
