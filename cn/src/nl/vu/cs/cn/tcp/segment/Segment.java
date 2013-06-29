@@ -59,12 +59,36 @@ public class Segment {
     private short checksum;
     private boolean validChecksum;
 
+    /**
+     * Create a new segment
+     * @param sourceAddr
+     * @param destinationAddr
+     * @param sourcePort
+     * @param destinationPort
+     * @param seq
+     */
     protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq) {
+        this(sourceAddr, destinationAddr, sourcePort, destinationPort, seq, 0);
+    }
+
+    /**
+     * Create a new segment and set isAck to true
+     * @param sourceAddr
+     * @param destinationAddr
+     * @param sourcePort
+     * @param destinationPort
+     * @param seq
+     * @param ack
+     */
+    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq, int ack) {
         this.sourceAddr = sourceAddr;
         this.destinationAddr = destinationAddr;
         this.sourcePort = sourcePort;
         this.destinationPort = destinationPort;
         this.seq = seq;
+        this.ack = ack;
+
+        isAck = true;
 
         // implementation specific: PUSH is set on all segments, RESET is not supported and set to false
         isPsh = true;
