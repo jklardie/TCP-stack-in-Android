@@ -12,20 +12,17 @@ public class TestConnect extends TestBase {
     }
 
     public void testConnect() throws Exception {
-        startServer(new ServerRunnable());
+        Thread server = startServer(new ServerRunnable());
 
         boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
-
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
         assertTrue("Expected clientSocket.connect() to return true", connected);
         assertEquals("After connect() client should be in establised state",
                 TransmissionControlBlock.State.ESTABLISHED,
                 getClientState());
+
+        // wait for server to finish
+        server.join(MAX_RUNTIME_MS);
     }
 
     private class ServerRunnable implements Runnable {
@@ -34,13 +31,7 @@ public class TestConnect extends TestBase {
         public void run() {
             serverSocket.accept();
 
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            assertEquals("After accept() server should be in establised state",
+            assertEquals("Server should never return before reaching the ESTABLISHED state",
                     TransmissionControlBlock.State.ESTABLISHED,
                     getServerState());
         }

@@ -7,6 +7,8 @@ import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public class TestBase extends TestCase {
 
+    protected static final int MAX_RUNTIME_MS = 30000;
+
     private static final int CLIENT_ADDR_LAST_OCTET = 15;
     private static final int SERVER_ADDR_LAST_OCTET = 16;
 
@@ -31,15 +33,10 @@ public class TestBase extends TestCase {
      * Start a runnable and wait 100ms so the server has time to call accept
      * @param runnable
      */
-    protected void startServer(Runnable runnable){
-        new Thread(runnable).start();
-
-        try {
-            // Give
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    protected Thread startServer(Runnable runnable){
+        Thread thread = new Thread(runnable);
+        thread.start();
+        return thread;
     }
 
     protected TransmissionControlBlock.State getClientState(){
