@@ -9,8 +9,6 @@ public class TestBase extends TestCase {
 
     public static final String TAG = "TCPTest";
 
-    protected static final int MAX_RUNTIME_MS = 30000;
-
     private static final int CLIENT_ADDR_LAST_OCTET = 15;
     private static final int SERVER_ADDR_LAST_OCTET = 16;
 
@@ -22,13 +20,20 @@ public class TestBase extends TestCase {
     protected TCP.Socket clientSocket;
     protected TCP.Socket serverSocket;
 
-    @Override
-    public void setUp() throws Exception {
+    protected void init() throws Exception {
         client = new UnreliableTCP(CLIENT_ADDR_LAST_OCTET);
         server = new UnreliableTCP(SERVER_ADDR_LAST_OCTET);
 
         clientSocket = client.socket();
         serverSocket = server.socket(SERVER_PORT);
+    }
+
+    protected void clearRetransmissionQueues() throws Exception {
+        // make sure all retransmission tasks are cleared (so other tests can start fresh)
+        client.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
+        server.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
+
+        super.tearDown();
     }
 
     /**
