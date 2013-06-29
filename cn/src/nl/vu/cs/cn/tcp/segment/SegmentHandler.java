@@ -216,8 +216,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
             if(tcb.getSendUnacknowledged() < segment.getAck() &&
                     segment.getAck() <= tcb.getSendNext()){
                 tcb.setSendUnacknowledged(segment.getAck());
-                // TODO: Any segments on the retransmission queue which are thereby
-                // entirely acknowledged are removed.
+                tcb.removeFromRetransmissionQueue(segment.getAck());
 
                 // TODO: Users should receive positive acknowledgments for buffers
                 // which have been SENT and fully acknowledged
@@ -263,6 +262,10 @@ public class SegmentHandler implements OnSegmentArriveListener {
     }
 
     private void handleSegmentText(Segment segment){
+        if(segment.getDataLength() == 0){
+            return;
+        }
+
         switch(tcb.getState()){
             case ESTABLISHED:
             case FIN_WAIT_1:
