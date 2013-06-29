@@ -26,8 +26,8 @@ public class TransmissionControlBlock {
     };
 
     private State state;
-    private final IP.IpAddress localAddr;
-    private final short localPort;
+    private IP.IpAddress localAddr;
+    private short localPort;
     private IP.IpAddress foreignAddr;
     private short foreignPort;
 
@@ -59,15 +59,9 @@ public class TransmissionControlBlock {
 
     /**
      * Create a new transmission control block (TCB) to hold connection state information.
-     * Set local and socket information. When this method finishes the state is set to CLOSED.
-     *
-     * @param localAddr Local IP address
-     * @param localPort Local port
+     * When this method finishes the state is set to CLOSED.
      */
-    public TransmissionControlBlock(IP.IpAddress localAddr, short localPort) {
-        this.localAddr = localAddr;
-        this.localPort = localPort;
-
+    public TransmissionControlBlock() {
         iss = getInitialSendSequenceNumber();
         state = State.CLOSED;
 
@@ -89,6 +83,16 @@ public class TransmissionControlBlock {
      */
     public State getState(){
         return state;
+    }
+
+    /**
+     * Set local socket address and port
+     * @param localAddr
+     * @param localPort
+     */
+    public void setLocalSocketInfo(IP.IpAddress localAddr, short localPort) {
+        this.localAddr = localAddr;
+        this.localPort = localPort;
     }
 
     /**
