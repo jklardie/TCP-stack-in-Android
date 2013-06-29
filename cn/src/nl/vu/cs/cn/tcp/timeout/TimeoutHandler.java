@@ -20,7 +20,6 @@ public class TimeoutHandler implements OnTimeoutListener {
     public TimeoutHandler(IP ip, TransmissionControlBlock tcb){
         this.ip = ip;
         this.tcb = tcb;
-        TAG += (tcb.isServer()) ? " [server]" : " [client]";
     }
 
     public void onUserTimeout(){
@@ -44,10 +43,10 @@ public class TimeoutHandler implements OnTimeoutListener {
 
         int retryNum = retransmissionSegment.getRetry();
         if(retryNum >= TransmissionControlBlock.MAX_RETRANSMITS){
-            Log.v(TAG, "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Not retrying");
+            Log.v(getTag(), "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Not retrying");
             // not retrying, so don't add it to the queue again
         } else {
-            Log.v(TAG, "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Retry #" + (retryNum+1));
+            Log.v(getTag(), "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Retry #" + (retryNum+1));
 
             retransmissionSegment.increaseRetry();
 
@@ -56,7 +55,7 @@ public class TimeoutHandler implements OnTimeoutListener {
                 ip.ip_send(packet);
             } catch (IOException e) {
                 // if an error occurs set a timer again and retry afterwards
-                Log.w(TAG, "Error while resending packet", e);
+                Log.w(getTag(), "Error while resending packet", e);
             } finally {
                 // retrying, so add segment to the retransmission queue again
                 tcb.addToRetransmissionQueue(retransmissionSegment);
@@ -66,5 +65,14 @@ public class TimeoutHandler implements OnTimeoutListener {
 
     public void onTimeWaitTimeout(){
         tcb.enterState(TransmissionControlBlock.State.CLOSED);
+    }
+
+    /**
+     * We have to determine the log TAG runtime (we don't know if we're the client or
+     * the server up front)
+     * @return
+     */
+    private String getTag(){
+        return TAG + ((tcb.isServer()) ? " [server]" : " [client]");
     }
 }
