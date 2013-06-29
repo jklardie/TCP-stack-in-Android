@@ -216,22 +216,27 @@ public class TCP {
 
             tcb.setForeignSocketInfo(dst, (short)port);
 
-            // send SYN packet <SEQ=ISS><CTL=SYN>
-            int iss = tcb.getInitialSendSequenceNumber();
-            Segment segment = SegmentUtil.getSYNPacket(tcb, iss);
-            IP.Packet packet = IPUtil.getPacket(segment);
-            try {
-                Log.v(TAG, "Sending SYN " + segment.getSeq());
-                ip.ip_send(packet);
-                tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
-            } catch (IOException e) {
-                Log.e(TAG, "Error while sending SYN", e);
-                return false;
-            }
+            // sending SYN until entering SYN SENT state should be synchronized
+            synchronized(tcb) {
+                // send SYN packet <SEQ=ISS><CTL=SYN>
+                int iss = tcb.getInitialSendSequenceNumber();
+                Segment segment = SegmentUtil.getSYNPacket(tcb, iss);
+                IP.Packet packet = IPUtil.getPacket(segment);
+                try {
+                    Log.v(TAG, "Sending: " + segment.toString());
+                    ip.ip_send(packet);
+                } catch (IOException e) {
+                    Log.e(TAG, "Error while sending SYN", e);
+                    return false;
+                }
 
-            tcb.setSendUnacknowledged(iss);
-            tcb.setSendNext(iss+1);
-            tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
+                tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
+
+                tcb.setSendUnacknowledged(iss);
+                tcb.setSendNext(iss+1);
+
+                tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
+            }
 
             // TODO wait for ESTABLISHED state and return
 

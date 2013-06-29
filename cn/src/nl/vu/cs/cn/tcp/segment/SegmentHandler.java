@@ -22,58 +22,62 @@ public class SegmentHandler implements OnSegmentArriveListener {
     }
 
     public void onSegmentArrive(Segment segment){
-        Log.v(TAG, "New segment arrived");
+        Log.v(TAG, "Received: " + segment.toString());
 
-        switch(tcb.getState()){
-            case CLOSED:
-                // Normally connection would be RESET. However, that is not supported in this implementation.
-                Log.v(TAG, "onSegmentArrive(): segment is dropped. Connection does not exist");
-                return;
-            case LISTEN:
-                handleSegmentArriveInListenState(segment);
-                return;
-            case SYN_SENT:
-                handleSegmentArriveInSynSentState(segment);
-                return;
-            default:
-                // first check sequence number
-                if(!acceptableSegment(segment)){
-                    Log.w(TAG, "onSegmentArrive(): unacceptable segment received. Dropping segment");
-                    // TODO: send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+        // we need to handle this segment in a synchronized fashion so other methods have
+        // time to finish (e.g. entering a state).
+        synchronized (tcb){
+            switch(tcb.getState()){
+                case CLOSED:
+                    // Normally connection would be RESET. However, that is not supported in this implementation.
+                    Log.v(TAG, "onSegmentArrive(): segment is dropped. Connection does not exist");
                     return;
-                } else {
-                    // TODO: ??
-                }
-
-                // second check the RST bit (not supported by this implementation)
-                // third check security and precedence (not supported by this implementation)
-
-                // fourth, check the SYN bit
-                if(segment.isSyn()){
-                    // This is an error, and should responed with RESET (however that's not supported)
-                    Log.e(TAG, "onSegmentArrive(): unexpected SYN segment. Ignoring");
+                case LISTEN:
+                    handleSegmentArriveInListenState(segment);
                     return;
-                }
-
-                // fifth, check the ACK field
-                if(!segment.isAck()){
-                    Log.w(TAG, "onSegmentArrive(): unexpected segment without ACK. Dropping segment");
+                case SYN_SENT:
+                    handleSegmentArriveInSynSentState(segment);
                     return;
-                } else {
-                    if(!handleACKArriveInDefaultState(segment)){
+                default:
+                    // first check sequence number
+                    if(!acceptableSegment(segment)){
+                        Log.w(TAG, "onSegmentArrive(): unacceptable segment received. Dropping segment");
+                        // TODO: send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                        return;
+                    } else {
+                        // TODO: ??
+                    }
+
+                    // second check the RST bit (not supported by this implementation)
+                    // third check security and precedence (not supported by this implementation)
+
+                    // fourth, check the SYN bit
+                    if(segment.isSyn()){
+                        // This is an error, and should responed with RESET (however that's not supported)
+                        Log.e(TAG, "onSegmentArrive(): unexpected SYN segment. Ignoring");
                         return;
                     }
-                }
 
-                // sixth, check the URG bit (not supported in this implementation)
+                    // fifth, check the ACK field
+                    if(!segment.isAck()){
+                        Log.w(TAG, "onSegmentArrive(): unexpected segment without ACK. Dropping segment");
+                        return;
+                    } else {
+                        if(!handleACKArriveInDefaultState(segment)){
+                            return;
+                        }
+                    }
 
-                // seventh, process the segment text
-                handleSegmentText(segment);
+                    // sixth, check the URG bit (not supported in this implementation)
 
-                // eigth, check the FIN bit
-                if(segment.isFin()){
-                    handleSegmentFIN(segment);
-                }
+                    // seventh, process the segment text
+                    handleSegmentText(segment);
+
+                    // eigth, check the FIN bit
+                    if(segment.isFin()){
+                        handleSegmentFIN(segment);
+                    }
+            }
         }
     }
 
@@ -97,12 +101,12 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
             // TODO: queue any other control or text for processing later (actually, can SYN contain data?).
 
-            // Send SYN segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
+            // Send SYN,ACK segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
             int iss = tcb.getInitialSendSequenceNumber();
             Segment outSegment = SegmentUtil.getSYNACKPacket(tcb, iss, tcb.getReceiveNext());
             IP.Packet packet = IPUtil.getPacket(outSegment);
             try {
-                Log.v(TAG, "Sending SYN ACK " + outSegment.getSeq());
+                Log.v(TAG, "Sending: " + outSegment.toString());
                 ip.ip_send(packet);
                 tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
             } catch (IOException e) {
