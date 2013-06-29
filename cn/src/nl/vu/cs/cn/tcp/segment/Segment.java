@@ -28,6 +28,16 @@ public class Segment {
     public static final short SYN_MASK = 2;
     public static final short FIN_MASK = 1;
 
+    /**
+     * Data offset: The number of 32 bit words in the TCP Header.  This indicates where
+     * the data begins. We have 5 words of 32 bits:
+     * - Source + destination port
+     * - Seq num
+     * - Ack num
+     * - Data offset + reserved area + control bits + window
+     * - Checksum + Urgent pointer
+     */
+    private static final short DATA_OFFSET = 5;
 
     private IP.IpAddress sourceAddr;
     private IP.IpAddress destinationAddr;
@@ -37,7 +47,7 @@ public class Segment {
     private int seq;    // segment sequence number
     private int ack;    // segment acknowledgement number
     private int len;    // segment length (both header + data)
-    private int wnd;    // segment window
+    private short wnd;    // segment window
 
     // Note: we omit variables urgent pointer and precendence value because
     // those are unsupported in this implementation.
@@ -46,8 +56,15 @@ public class Segment {
     private boolean isUrg, isAck, isPsh, isRst, isSyn, isFin;
 
     private short checksum;
-    private final boolean validChecksum;
+    private boolean validChecksum;
 
+    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq) {
+        this.sourceAddr = sourceAddr;
+        this.destinationAddr = destinationAddr;
+        this.sourcePort = sourcePort;
+        this.destinationPort = destinationPort;
+        this.seq = seq;
+    }
 
     public Segment(byte[] packet, int sourceAddr, int destinationAddr){
         this.sourceAddr = IP.IpAddress.getAddress(sourceAddr);
@@ -89,6 +106,11 @@ public class Segment {
         validChecksum = (expectedChecksum == checksum);
     }
 
+    /**
+     * Set the control bits for this segment. Use the control masks
+     * with the logical OR operation to set multiple bits.
+     * @param bits
+     */
     public void setControlBits(short bits){
         isUrg = (URG_MASK & bits) != 0;
         isAck = (ACK_MASK & bits) != 0;
@@ -152,5 +174,70 @@ public class Segment {
 
     public boolean isFin() {
         return isFin;
+    }
+
+    public byte[] encode(){
+        int capacity = DATA_OFFSET * 4; // capacity in bytes
+        if(getDataLength() > 0){
+            capacity += data.length;
+        }
+
+        ByteBuffer bb = ByteBuffer.allocate(capacity);
+        bb.putShort(sourcePort);
+        bb.putShort(destinationPort);
+        bb.putInt(seq);
+        bb.putInt(ack);
+
+        /*
+         * Create bits for data offset, reserved area, and control bits.
+         *
+         * Start with DATA_OFFSET, which looks like 0000 0000 0000 0101 (assuming
+         * the value DATA_OFFSET equals 5). The data offset field is 4 bits long,
+         * so shift to the left by twelve. This results in 0101 0000 0000 0000
+         */
+        short bits = DATA_OFFSET << 12;
+
+        /*
+         * Set the control bits using the logical operator
+         */
+        bits |= (isUrg ? URG_MASK : 0);
+        bits |= (isAck ? ACK_MASK : 0);
+        bits |= (isPsh ? PSH_MASK : 0);
+        bits |= (isRst ? RST_MASK : 0);
+        bits |= (isSyn ? SYN_MASK : 0);
+        bits |= (isFin ? FIN_MASK : 0);
+
+        /*
+         * Assume all flags where set to true. Then the bits look like this:
+         * 0101 0000 0011 1111. Because the bit masks are shorts, and thus have
+         * length 16, the bit string looks exactly as we need it. Also, the reserved
+         * area will always stay 0.
+         */
+
+        bb.putShort(bits);
+        bb.putShort(wnd);
+
+        /*
+         * Store current position so we can inject the checksum later on.
+         * Also, insert 16 zero's that we'll later replace with the actual
+         * checksum.
+         */
+        int checksumPosition = bb.position();
+        bb.putShort((short) 0);
+
+        /*
+         * Set urgent pointer; this will be ignored if urg is not set,
+         * which is the case in this implementation.
+         */
+        bb.putShort((short) 0);
+
+        if(getDataLength() > 0){
+            bb.put(data);
+        }
+
+        checksum = Util.calculateChecksum(bb, sourceAddr, destinationAddr, bb.capacity());
+        bb.putShort(checksumPosition, checksum);
+
+        return bb.array();
     }
 }
