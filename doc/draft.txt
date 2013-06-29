@@ -20,3 +20,5 @@ general:
 - no need to implement abort call; not supported
 - no security implemented
 - precedence not check as window is max size of one packet
+- some parts are synchronized to make sure after sending a packet a state is set before receiving the ack
+- segment length = data.length + control bits that take up space (SYN & FIN)
