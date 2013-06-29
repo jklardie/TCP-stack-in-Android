@@ -9,6 +9,7 @@ import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.IPUtil;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
+import nl.vu.cs.cn.tcp.segment.Segment;
 
 public class TimeoutHandler implements OnTimeoutListener {
 
@@ -41,16 +42,27 @@ public class TimeoutHandler implements OnTimeoutListener {
             return;
         }
 
+        Segment segment = retransmissionSegment.getSegment();
         int retryNum = retransmissionSegment.getRetry();
         if(retryNum >= TransmissionControlBlock.MAX_RETRANSMITS){
-            Log.v(getTag(), "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Not retrying");
+            Log.v(getTag(), "Segment " + segment.getSeq() + " was not ACKed. Not retrying");
             // not retrying, so don't add it to the queue again
+
+            switch (tcb.getState()){
+                case SYN_SENT:
+                case SYN_RECEIVED:
+                    // Client/Server where performing three-way handshake, but that failed. Move state to CLOSED
+                    tcb.enterState(TransmissionControlBlock.State.CLOSED);
+                    break;
+
+                // TODO: Expend this list
+            }
         } else {
-            Log.v(getTag(), "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Retry #" + (retryNum+1));
+            Log.v(getTag(), "Segment " + segment.getSeq() + " was not ACKed. Retry #" + (retryNum+1));
 
             retransmissionSegment.increaseRetry();
 
-            IP.Packet packet = IPUtil.getPacket(retransmissionSegment.getSegment());
+            IP.Packet packet = IPUtil.getPacket(segment);
             try {
                 ip.ip_send(packet);
             } catch (IOException e) {
