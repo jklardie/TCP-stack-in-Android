@@ -18,4 +18,21 @@ public abstract class SegmentUtil {
         segment.setControlBits(Segment.SYN_MASK);
         return segment;
     }
+
+    /**
+     * Construct a SYN ACK packet used during the three-way handshake
+     * @param tcb
+     * @return
+     */
+    public static Segment getSYNACKPacket(TransmissionControlBlock tcb, int seq, int ack){
+        Segment segment = new Segment(
+                tcb.getLocalAddr(), tcb.getForeignAddr(),
+                tcb.getLocalport(), tcb.getForeignPort(),
+                seq, ack);
+
+        segment.setControlBits(Segment.SYN_MASK);
+        // isAck is automatically set because we passed an ack num to Segment
+
+        return segment;
+    }
 }
