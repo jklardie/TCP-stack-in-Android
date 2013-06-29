@@ -2,12 +2,17 @@ package nl.vu.cs.cn.tcp;
 
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
@@ -43,6 +48,9 @@ public class TransmissionControlBlock {
     private boolean isServer;   // used for logging purposes
 
     private State state;
+    private final Lock lock = new ReentrantLock();
+    private final Condition stateChanged = lock.newCondition();
+
     private IP.IpAddress localAddr;
     private short localPort;
     private IP.IpAddress foreignAddr;
@@ -92,8 +100,15 @@ public class TransmissionControlBlock {
      * @param state
      */
     public void enterState(State state){
-        this.state = state;
-        Log.v(TAG, "Entered state: " + state);
+        lock.lock();
+        try {
+            Log.v(TAG, "Entering state: " + state);
+            this.state = state;
+
+            stateChanged.signalAll();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -103,6 +118,31 @@ public class TransmissionControlBlock {
     public State getState(){
         return state;
     }
+
+    /**
+     * Wait until the TCP state changes to one of the acceptable states
+     * @param states
+     */
+    public void waitForStates(TransmissionControlBlock.State... states){
+        ArrayList<State> acceptableStates =
+                new ArrayList<TransmissionControlBlock.State>(Arrays.asList(states));
+
+        lock.lock();
+        try {
+            while(!acceptableStates.contains(state)){
+                try {
+                    stateChanged.await();
+                } catch (InterruptedException e) {
+                    // ignore, wait again
+                }
+            }
+
+            // condition has been met, done waiting!
+        } finally {
+            lock.unlock();
+        }
+    }
+
 
     public boolean isServer() {
         return isServer;
