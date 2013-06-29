@@ -22,6 +22,11 @@ public class SegmentHandler implements OnSegmentArriveListener {
     }
 
     public void onSegmentArrive(Segment segment){
+        if(!segment.hasValidChecksum()){
+            Log.v(TAG, "Received segment with invalid checksum. Dropping segment");
+            return;
+        }
+
         Log.v(TAG, "Received: " + segment.toString());
 
         // we need to handle this segment in a synchronized fashion so other methods have

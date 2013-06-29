@@ -251,6 +251,10 @@ public class Segment {
         isFin = fin;
     }
 
+    public boolean hasValidChecksum(){
+        return validChecksum;
+    }
+
     public byte[] encode(){
         int capacity = DATA_OFFSET * 4; // capacity in bytes
         if(getDataLength() > 0){
