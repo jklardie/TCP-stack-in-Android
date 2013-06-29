@@ -424,6 +424,7 @@ public class TransmissionControlBlock {
         if(scheduledFuture != null){
             // Cancel scheduled task (the call to retransmit)
             scheduledFuture.cancel(true);
+            return true;
         }
         return false;
     }
