@@ -53,11 +53,12 @@ public class TimeoutHandler implements OnTimeoutListener {
             IP.Packet packet = IPUtil.getPacket(retransmissionSegment.getSegment());
             try {
                 ip.ip_send(packet);
-
+            } catch (IOException e) {
+                // if an error occurs set a timer again and retry afterwards
+                Log.w(TAG, "Error while resending packet", e);
+            } finally {
                 // retrying, so add segment to the retransmission queue again
                 tcb.addToRetransmissionQueue(retransmissionSegment);
-            } catch (IOException e) {
-                Log.e(TAG, "Error while resending packet", e);
             }
         }
     }
