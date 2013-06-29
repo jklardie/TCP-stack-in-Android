@@ -1,4 +1,4 @@
-package nl.vu.cs.cn;
+package nl.vu.cs.cn.interfaces;
 
 import junit.framework.TestCase;
 
@@ -6,9 +6,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+import nl.vu.cs.cn.TCP;
+
 /**
  * Check if the TCP implementation conforms to the provided
- * interface and does not expose additional public methods.
+ * interfaces and does not expose additional public methods.
  *
  * Allowed methods:
  *  - TCP(int addr)
