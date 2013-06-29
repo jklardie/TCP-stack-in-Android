@@ -1,15 +1,27 @@
 package nl.vu.cs.cn.tcp;
 
-import java.util.LinkedList;
-import java.util.Queue;
+import android.util.Log;
+
+import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
+import nl.vu.cs.cn.tcp.segment.Segment;
 
 /**
  * The Transmission Control Block in TCP keeps track of the state of a connection,
  * and contains all other important information needed during a connection.
  */
 public class TransmissionControlBlock {
+
+    private static final int RETRANSMIT_TIMEOUT_SEC = 1;    // number of time before retransmit
+    public static final int MAX_RETRANSMITS = 10;          // maximum number of retransmits
 
     public enum State {
         CLOSED,
@@ -24,6 +36,8 @@ public class TransmissionControlBlock {
         CLOSE_WAIT,
         LAST_ACK
     };
+
+    private boolean isServer;   // used for logging purposes
 
     private State state;
     private IP.IpAddress localAddr;
@@ -45,28 +59,25 @@ public class TransmissionControlBlock {
     private int rcv_nxt;        // receive - next sequence number
     private int rcv_wnd;        // receive - window
 
-    /*
-        Receive Sequence Variables
-          RCV.NXT - receive next
-          RCV.WND - receive window
-          RCV.UP  - receive urgent pointer
-          IRS     - initial receive sequence number
+    private ConcurrentHashMap<RetransmissionSegment, ScheduledFuture> retransmissionMap;
+    private ConcurrentLinkedQueue<Byte> transmissionQueue;
+    private ConcurrentLinkedQueue<Byte> processingQueue;
 
-     */
-
-    private Queue<Byte> transmissionQueue;
-    private Queue<Byte> processingQueue;
+    private TimeoutHandler timeoutHandler;
 
     /**
      * Create a new transmission control block (TCB) to hold connection state information.
      * When this method finishes the state is set to CLOSED.
      */
-    public TransmissionControlBlock() {
+    public TransmissionControlBlock(IP ip) {
         iss = getInitialSendSequenceNumber();
         state = State.CLOSED;
+        
+        retransmissionMap = new ConcurrentHashMap<RetransmissionSegment, ScheduledFuture>();
+        transmissionQueue = new ConcurrentLinkedQueue<Byte>();
+        processingQueue = new ConcurrentLinkedQueue<Byte>();
 
-        transmissionQueue = new LinkedList<Byte>();
-        processingQueue = new LinkedList<Byte>();
+        timeoutHandler = new TimeoutHandler(ip, this);
     }
 
     /**
@@ -85,6 +96,14 @@ public class TransmissionControlBlock {
         return state;
     }
 
+    public boolean isServer() {
+        return isServer;
+    }
+
+    public void setIsServer(boolean isServer) {
+        this.isServer = isServer;
+    }
+
     /**
      * Set local socket address and port
      * @param localAddr
@@ -93,6 +112,22 @@ public class TransmissionControlBlock {
     public void setLocalSocketInfo(IP.IpAddress localAddr, short localPort) {
         this.localAddr = localAddr;
         this.localPort = localPort;
+    }
+
+    /**
+     * Get the local ip address
+     * @return
+     */
+    public IP.IpAddress getLocalAddr(){
+        return localAddr;
+    }
+
+    /**
+     * Get the local tcp port
+     * @return
+     */
+    public short getLocalport(){
+        return localPort;
     }
 
     /**
@@ -111,6 +146,22 @@ public class TransmissionControlBlock {
      */
     public boolean hasForeignSocketInfo() {
         return foreignAddr != null && foreignPort != 0;
+    }
+
+    /**
+     * Get foreign ip address
+     * @return
+     */
+    public IP.IpAddress getForeignAddr(){
+        return foreignAddr;
+    }
+
+    /**
+     * Get foreign tcp port
+     * @return
+     */
+    public short getForeignPort(){
+        return foreignPort;
     }
 
 
@@ -209,7 +260,7 @@ public class TransmissionControlBlock {
 
 
     ////////////////////////
-    // Data  methods
+    // Data methods
     ////////////////////////
 
     /**
@@ -271,6 +322,51 @@ public class TransmissionControlBlock {
             buf[offset+i] = processingQueue.remove();
         }
         return len;
+    }
+
+    
+    ////////////////////////
+    // Retransmission methods
+    ////////////////////////
+
+    /**
+     * Add a segment to the retransmission queue and start a timer to check if the ACK
+     * timed out.
+     *
+     * @param retransmissionSegment
+     */
+    public void addToRetransmissionQueue(final RetransmissionSegment retransmissionSegment){
+        ScheduledExecutorService exec = Executors.newScheduledThreadPool(1);
+        ScheduledFuture task = exec.schedule(new Runnable() {
+            @Override
+            public void run() {
+                timeoutHandler.onRetransmissionTimeout(retransmissionSegment);
+            }
+        }, RETRANSMIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+        retransmissionMap.put(retransmissionSegment, task);
+    }
+
+    /**
+     * Remove all segments from the retransmission queue which have a sequence number
+     * smaller than the ack number
+     * @param ack
+     */
+    public void removeFromRetransmissionQueue(int ack){
+        for(RetransmissionSegment segment : retransmissionMap.keySet()){
+            if(segment.getSegment().getSeq() < ack){
+                retransmissionMap.remove(segment);
+            }
+        }
+    }
+
+    /**
+     * Remove a specific segment from the retransmission queue
+     * @param retransmissionSegment
+     * @return true if and only if the segment existed (and was removed)
+     */
+    public boolean removeFromRetransmissionQueue(RetransmissionSegment retransmissionSegment) {
+        return (retransmissionMap.remove(retransmissionSegment) != null);
     }
 
 }

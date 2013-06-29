@@ -27,6 +27,21 @@ public class TestBase extends TestCase {
         serverSocket = server.socket(SERVER_PORT);
     }
 
+    /**
+     * Start a runnable and wait 100ms so the server has time to call accept
+     * @param runnable
+     */
+    protected void startServer(Runnable runnable){
+        new Thread(runnable).start();
+
+        try {
+            // Give
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     protected TransmissionControlBlock.State getClientState(){
         return client.getState();
     }

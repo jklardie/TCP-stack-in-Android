@@ -1,12 +1,25 @@
 package nl.vu.cs.cn.tcp;
 
 
+import android.util.Log;
+
+import java.io.IOException;
+
+import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.IPUtil;
+import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
+
 public class TimeoutHandler implements OnTimeoutListener {
 
-    private final TransmissionControlBlock tcb;
+    private String TAG = "TimeoutHandler";
 
-    public TimeoutHandler(TransmissionControlBlock tcb){
+    private final TransmissionControlBlock tcb;
+    private final IP ip;
+
+    public TimeoutHandler(IP ip, TransmissionControlBlock tcb){
+        this.ip = ip;
         this.tcb = tcb;
+        TAG += (tcb.isServer()) ? " [server]" : " [client]";
     }
 
     public void onUserTimeout(){
@@ -21,12 +34,32 @@ public class TimeoutHandler implements OnTimeoutListener {
         tcb.enterState(TransmissionControlBlock.State.CLOSED);
     }
 
-    public void onRetransmissionTimeout(){
-        /*
-         * TODO:
-         * - resend segment at front of retransmission queue again
-         * - reinitialze retrainsmission timer
-         */
+    public void onRetransmissionTimeout(RetransmissionSegment retransmissionSegment){
+        // remove segment from the retransmission queue
+        if(!tcb.removeFromRetransmissionQueue(retransmissionSegment)){
+            // the segment did not exist in the queue anymore
+            return;
+        }
+
+        int retryNum = retransmissionSegment.getRetry();
+        if(retryNum >= TransmissionControlBlock.MAX_RETRANSMITS){
+            Log.v(TAG, "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Not retrying");
+            // not retrying, so don't add it to the queue again
+        } else {
+            Log.v(TAG, "Segment " + retransmissionSegment.getSegment().getSeq() + " was not ACKed. Retry #" + (retryNum+1));
+
+            retransmissionSegment.increaseRetry();
+
+            IP.Packet packet = IPUtil.getPacket(retransmissionSegment.getSegment());
+            try {
+                ip.ip_send(packet);
+
+                // retrying, so add segment to the retransmission queue again
+                tcb.addToRetransmissionQueue(retransmissionSegment);
+            } catch (IOException e) {
+                Log.e(TAG, "Error while resending packet", e);
+            }
+        }
     }
 
     public void onTimeWaitTimeout(){

@@ -5,18 +5,22 @@ import android.util.Log;
 import java.io.IOException;
 
 import nl.vu.cs.cn.IP.IpAddress;
+import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
+import nl.vu.cs.cn.tcp.segment.Segment;
 import nl.vu.cs.cn.tcp.segment.SegmentHandler;
 import nl.vu.cs.cn.tcp.segment.SegmentReceiver;
 import nl.vu.cs.cn.tcp.TimeoutHandler;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
+import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 
 /**
  * This class represents a TCP stack.
  */
 public class TCP {
 
-    private static final String TAG = "TCP";
     private static final short CLIENT_LOCAL_PORT = 3110;    // local port used by client
+
+    private String TAG = "TCP";
 
     private IP ip;
     private TransmissionControlBlock tcb;
@@ -24,7 +28,6 @@ public class TCP {
 
     private SegmentReceiver segmentReceiver;
     private SegmentHandler segmentHandler;
-    private TimeoutHandler timeoutHandler;
 
 
     /**
@@ -37,21 +40,18 @@ public class TCP {
      */
     public TCP(int address) throws IOException {
         ip = new IP(address);
-        tcb = new TransmissionControlBlock();
-
-        // create timeout handler
-        timeoutHandler = new TimeoutHandler(tcb);
-
-        // create segment handler, and start new thread to receive messages
-        segmentHandler = new SegmentHandler(tcb);
-        segmentReceiver = new SegmentReceiver(segmentHandler, ip);
-        segmentReceiver.run();
+        tcb = new TransmissionControlBlock(ip);
     }
 
     /**
      * @return a new client socket for this stack
      */
     public Socket socket() {
+        TAG += " [client]";
+        tcb.setIsServer(false);
+
+        initSegmentReceiver();
+
         return new Socket();
     }
 
@@ -60,7 +60,21 @@ public class TCP {
      * @param port the port to bind the socket to.
      */
     public Socket socket(int port) {
+        TAG += " [server]";
+        tcb.setIsServer(true);
+
+        initSegmentReceiver();
+
         return new Socket(port);
+    }
+
+    /**
+     * Create a segment handler, and start new thread to receive messages
+     */
+    private void initSegmentReceiver(){
+        segmentHandler = new SegmentHandler(tcb);
+        segmentReceiver = new SegmentReceiver(segmentHandler, ip);
+        segmentReceiver.run();
     }
 
     /**
@@ -195,16 +209,29 @@ public class TCP {
                 Log.e(TAG, "Error in connect(): foreign socket unspecified");
                 return false;
             } else if(tcb.hasForeignSocketInfo()){
-                Log.e(TAG, "Error in connect(): insufficient resources");
+                Log.e(TAG, "Error in connect(): insufficient resources (connect() was already called before)");
                 return false;
             }
 
+            // at this point we are sure we are in the CLOSED state
+
             tcb.setForeignSocketInfo(dst, (short)port);
 
-            // TODO: send SYN packet
+            // send SYN packet <SEQ=ISS><CTL=SYN>
+            int iss = tcb.getInitialSendSequenceNumber();
+            Segment segment = SegmentUtil.getSYNPacket(tcb, iss);
+            IP.Packet packet = IPUtil.getPacket(segment);
+            try {
+                Log.v(TAG, "Sending SYN");
+                ip.ip_send(packet);
+                tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
+            } catch (IOException e) {
+                Log.e(TAG, "Error while sending SYN", e);
+                return false;
+            }
 
-            tcb.setSendUnacknowledged(tcb.getInitialSendSequenceNumber());
-            tcb.setSendNext(tcb.getInitialSendSequenceNumber()+1);
+            tcb.setSendUnacknowledged(iss);
+            tcb.setSendNext(iss+1);
             tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
 
             return true;

@@ -12,10 +12,16 @@ public class TestConnect extends TestBase {
     }
 
     public void testConnect() throws Exception {
-        // start server, to listen for incomming connects
-        new Thread(new ServerRunnable()).start();
+        startServer(new ServerRunnable());
 
         boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         assertTrue("Expected clientSocket.connect() to return true", connected);
         assertEquals("After connect() client should be in establised state",
                 TransmissionControlBlock.State.ESTABLISHED,
@@ -27,6 +33,13 @@ public class TestConnect extends TestBase {
         @Override
         public void run() {
             serverSocket.accept();
+
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             assertEquals("After accept() server should be in establised state",
                     TransmissionControlBlock.State.ESTABLISHED,
                     getServerState());

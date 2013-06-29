@@ -6,15 +6,18 @@ import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public class SegmentHandler implements OnSegmentArriveListener {
 
-    private static final String TAG = "SegmentHandler";
+    private String TAG = "SegmentHandler";
 
     private final TransmissionControlBlock tcb;
 
     public SegmentHandler(TransmissionControlBlock tcb){
         this.tcb = tcb;
+        TAG += (tcb.isServer()) ? " [server]" : " [client]";
     }
 
     public void onSegmentArrive(Segment segment){
+        Log.v(TAG, "New segment arrived");
+
         switch(tcb.getState()){
             case CLOSED:
                 // Normally connection would be RESET. However, that is not supported in this implementation.
@@ -100,6 +103,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
     }
 
     private void handleSegmentArriveInSynSentState(Segment segment){
+        // first, check if this is an ACK packet
         if(segment.isAck()){
             if(segment.getAck() <= tcb.getInitialSendSequenceNumber() ||
                     segment.getAck() > tcb.getSendNext()){
@@ -114,23 +118,24 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 Log.w(TAG, "onSegmentArrive(): unacceptable ACK received. Ignoring");
                 return;
             }
+        } else {
+            // Simultaneous open is not supported (we use a client-server model
+            Log.w(TAG, "onSegmentArrive(): excepted SYN-ACK in SYN SENT state. Missing ACK. Ignoring");
+            return;
         }
 
         // Secondly, after checking ACK, RST would be checked. However, that is not supported in this implementation.
         // Thirdly, security and precedence would be checked. Also not implemented.
 
-        // at this point the segment either does not contain ACK, or the ACK is ok
+        // at this point the segment contains an ACK
 
         // Fourthly, check syn
         if(segment.isSyn()){
             tcb.setReceiveNext(segment.getSeq()+1);
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
-            if(segment.isAck()){
-                tcb.setSendUnacknowledged(segment.getAck());
-                // TODO: any segments on the retransmission queue which are
-                // hereby acknowledged should be removed.
-            }
+            tcb.setSendUnacknowledged(segment.getAck());
+            tcb.removeFromRetransmissionQueue(segment.getAck());
 
             if(tcb.getSendUnacknowledged() > tcb.getInitialSendSequenceNumber()){
                 // our SYN has been ACKed
@@ -143,6 +148,9 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 // TODO If there are other controls or text in the segment, queue them for
                 // processing after the ESTABLISHED state has been reached
             }
+        } else {
+            Log.w(TAG, "onSegmentArrive(): excepted SYN-ACK in SYN SENT state. Missing SYN. Ignoring");
+            return;
         }
     }
 

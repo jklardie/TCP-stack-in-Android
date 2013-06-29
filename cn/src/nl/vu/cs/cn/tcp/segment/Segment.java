@@ -1,6 +1,7 @@
 package nl.vu.cs.cn.tcp.segment;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.tcp.Util;
@@ -64,6 +65,10 @@ public class Segment {
         this.sourcePort = sourcePort;
         this.destinationPort = destinationPort;
         this.seq = seq;
+
+        // implementation specific: PUSH is set on all segments, RESET is not supported and set to false
+        isPsh = true;
+        isRst = false;
     }
 
     public Segment(byte[] packet, int sourceAddr, int destinationAddr){
@@ -126,6 +131,10 @@ public class Segment {
 
     public short getSourcePort() {
         return sourcePort;
+    }
+
+    public IP.IpAddress getDestinationAddr(){
+        return destinationAddr;
     }
 
     public short getDestinationPort() {
@@ -239,5 +248,22 @@ public class Segment {
         bb.putShort(checksumPosition, checksum);
 
         return bb.array();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(!(o instanceof Segment)){
+            return false;
+        }
+        
+        Segment segment = (Segment) o;
+        return segment.sourceAddr.getAddress() == sourceAddr.getAddress() &&
+                segment.sourcePort == sourcePort &&
+                segment.destinationAddr.getAddress() == destinationAddr.getAddress() &&
+                segment.destinationPort == destinationPort &&
+                segment.seq == seq && segment.ack == ack && segment.wnd == wnd &&
+                segment.isAck == isAck && segment.isSyn == isSyn && segment.isFin == isFin &&
+                segment.isRst == isRst && segment.isPsh == isPsh &&
+                Arrays.equals(segment.data, data);
     }
 }

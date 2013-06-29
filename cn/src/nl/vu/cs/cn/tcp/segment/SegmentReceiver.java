@@ -1,13 +1,10 @@
 package nl.vu.cs.cn.tcp.segment;
 
 
-import android.util.Log;
-
 import nl.vu.cs.cn.IP;
 
 public class SegmentReceiver {
 
-    private static final String TAG = "SegmentReceiver";
     private static final int RECEIVE_TIMEOUT = 60;
 
     private final IP ip;
@@ -28,12 +25,10 @@ public class SegmentReceiver {
                     try {
                         ip.ip_receive_timeout(packet, RECEIVE_TIMEOUT);
                     } catch (Exception e) {
-                        Log.v(TAG, "Receive timed out without receiving packet. Retrying");
                         packet.data = null;
                     }
                 }
 
-                Log.v(TAG, "Received IP packet");
                 Segment segment = new Segment(packet.data, packet.source, packet.destination);
                 listener.onSegmentArrive(segment);
             }
