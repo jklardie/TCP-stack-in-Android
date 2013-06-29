@@ -68,7 +68,7 @@ public class Segment {
      * @param seq
      */
     protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq) {
-        this(sourceAddr, destinationAddr, sourcePort, destinationPort, seq, 0);
+        this(sourceAddr, destinationAddr, sourcePort, destinationPort, seq, -1);
     }
 
     /**
@@ -86,9 +86,11 @@ public class Segment {
         this.sourcePort = sourcePort;
         this.destinationPort = destinationPort;
         this.seq = seq;
-        this.ack = ack;
 
-        isAck = true;
+        if(ack > -1){
+            this.ack = ack;
+            isAck = true;
+        }
 
         // implementation specific: PUSH is set on all segments, RESET is not supported and set to false
         isPsh = true;
@@ -137,7 +139,9 @@ public class Segment {
 
     /**
      * Set the control bits for this segment. Use the control masks
-     * with the logical OR operation to set multiple bits.
+     * with the logical OR operation to set multiple bits. Note that
+     * this overwrites the current control bits values.
+     *
      * @param bits
      */
     public void setControlBits(short bits){
@@ -189,24 +193,48 @@ public class Segment {
         return isUrg;
     }
 
+    public void setIsUrg(boolean urg) {
+        isUrg = urg;
+    }
+
     public boolean isAck() {
         return isAck;
+    }
+
+    public void setIsAck(boolean ack) {
+        isAck = ack;
     }
 
     public boolean isPsh() {
         return isPsh;
     }
 
+    public void setIsPsh(boolean psh) {
+        isPsh = psh;
+    }
+
     public boolean isRst() {
         return isRst;
+    }
+
+    public void setIsRst(boolean rst) {
+        isRst = rst;
     }
 
     public boolean isSyn() {
         return isSyn;
     }
 
+    public void setIsSyn(boolean syn) {
+        isSyn = syn;
+    }
+
     public boolean isFin() {
         return isFin;
+    }
+
+    public void setIsFin(boolean fin) {
+        isFin = fin;
     }
 
     public byte[] encode(){
@@ -289,5 +317,23 @@ public class Segment {
                 segment.isAck == isAck && segment.isSyn == isSyn && segment.isFin == isFin &&
                 segment.isRst == isRst && segment.isPsh == isPsh &&
                 Arrays.equals(segment.data, data);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("SEQ: ").append(seq);
+        if(isAck) sb.append(" | ACK: ").append(ack);
+        sb.append(" | ");
+        if(isUrg) sb.append("URG, ");
+        if(isAck) sb.append("ACK, ");
+        if(isPsh) sb.append("PSH, ");
+        if(isRst) sb.append("RST, ");
+        if(isSyn) sb.append("SYN, ");
+        if(isFin) sb.append("FIN ");
+        if(getDataLength() > 0) sb.append(" | [").append(data).append("]");
+
+        return sb.toString();
     }
 }
