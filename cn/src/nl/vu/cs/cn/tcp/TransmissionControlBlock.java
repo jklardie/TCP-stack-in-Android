@@ -1,5 +1,7 @@
 package nl.vu.cs.cn.tcp;
 
+import android.util.Log;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -19,6 +21,8 @@ public class TransmissionControlBlock {
 
     private static final int RETRANSMIT_TIMEOUT_SEC = 1;    // number of time before retransmit
     public static final int MAX_RETRANSMITS = 10;          // maximum number of retransmits
+
+    private String TAG = "TCB";
 
     public enum State {
         CLOSED,
@@ -83,6 +87,7 @@ public class TransmissionControlBlock {
      */
     public void enterState(State state){
         this.state = state;
+        Log.v(TAG, "Entered state: " + state);
     }
 
     /**
@@ -99,6 +104,7 @@ public class TransmissionControlBlock {
 
     public void setIsServer(boolean isServer) {
         this.isServer = isServer;
+        TAG += (isServer) ? " [server]" : " [client]";
     }
 
     /**
