@@ -76,7 +76,9 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     // sixth, check the URG bit (not supported in this implementation)
 
                     // seventh, process the segment text
-                    handleSegmentText(segment);
+                    if(segment.getDataLength() > 0){
+                        handleSegmentText(segment);
+                    }
 
                     // eigth, check the FIN bit
                     if(segment.isFin()){
@@ -103,7 +105,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
             // advance receive next sequence number by the length of this segment,
             // which should be one because it only has the SYN control bit
-            tcb.setReceiveNext(segment.getSeq()+segment.getLen());
+            tcb.setReceiveNext(segment.getSeq() + segment.getLen());
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
             // TODO: queue any other control or text for processing later (actually, can SYN contain data?).
@@ -298,6 +300,10 @@ public class SegmentHandler implements OnSegmentArriveListener {
     }
 
     private void handleSegmentFIN(Segment segment){
+        if(!segment.isFin()){
+            return;
+        }
+
         switch(tcb.getState()){
             // dont handle FIN in specific states
             case CLOSED:
@@ -315,6 +321,17 @@ public class SegmentHandler implements OnSegmentArriveListener {
         tcb.advanceReceiveNext(segment.getLen());
 
         // TODO: send ack for FIN
+        Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+        IP.Packet packet = IPUtil.getPacket(outSegment);
+        try {
+            Log.v(TAG, "Sending: " + outSegment.toString());
+            ip.ip_send(packet);
+            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+        } catch (IOException e) {
+            Log.e(TAG, "Error while sending ACK for FIN", e);
+            // TODO: howto handle this? For now let other party send FIN again (they did not get the ACK)
+            return;
+        }
 
         switch(tcb.getState()){
             case SYN_RECEIVED:
