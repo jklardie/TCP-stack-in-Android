@@ -45,8 +45,8 @@ public class TimeoutHandler implements OnTimeoutListener {
             }
 
             // double check if segment is not acknowledged by now
-            if(segment.getSeq() < tcb.getSendUnacknowledged()){
-                // the sequence number has been acknowledged by now
+            if(segment.getSeq()+segment.getLen() < tcb.getSendUnacknowledged()){
+                // the sequence number has been completely acknowledged by now
                 return;
             }
         }
