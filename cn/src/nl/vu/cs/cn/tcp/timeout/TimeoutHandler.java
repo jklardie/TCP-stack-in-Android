@@ -36,16 +36,19 @@ public class TimeoutHandler implements OnTimeoutListener {
     }
 
     public void onRetransmissionTimeout(RetransmissionSegment retransmissionSegment){
-        // remove segment from the retransmission queue
-        if(!tcb.removeFromRetransmissionQueue(retransmissionSegment)){
-            // the segment did not exist in the queue anymore
-            return;
-        }
-
         Segment segment = retransmissionSegment.getSegment();
-        if(segment.getSeq() < tcb.getSendUnacknowledged()){
-            // the sequence number has been acknowledged by now
-            return;
+        synchronized (tcb){
+            // remove segment from the retransmission queue
+            if(!tcb.removeFromRetransmissionQueue(retransmissionSegment)){
+                // the segment did not exist in the queue anymore
+                return;
+            }
+
+            // double check if segment is not acknowledged by now
+            if(segment.getSeq() < tcb.getSendUnacknowledged()){
+                // the sequence number has been acknowledged by now
+                return;
+            }
         }
 
         int retryNum = retransmissionSegment.getRetry();
