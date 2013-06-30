@@ -43,6 +43,11 @@ public class TimeoutHandler implements OnTimeoutListener {
         }
 
         Segment segment = retransmissionSegment.getSegment();
+        if(segment.getSeq() < tcb.getSendUnacknowledged()){
+            // the sequence number has been acknowledged by now
+            return;
+        }
+
         int retryNum = retransmissionSegment.getRetry();
         if(retryNum >= TransmissionControlBlock.MAX_RETRANSMITS){
             Log.v(getTag(), "Segment " + segment.getSeq() + " was not ACKed. Not retrying");
@@ -50,9 +55,12 @@ public class TimeoutHandler implements OnTimeoutListener {
 
             switch (tcb.getState()){
                 case SYN_SENT:
-                case SYN_RECEIVED:
-                    // Client/Server where performing three-way handshake, but that failed. Move state to CLOSED
+                    // Client performing three-way handshake, but that failed. Move state to CLOSED
                     tcb.enterState(TransmissionControlBlock.State.CLOSED);
+                    break;
+                case SYN_RECEIVED:
+                    // Server performing three-way handshake, but that failed. Move state to LISTEN
+                    tcb.enterState(TransmissionControlBlock.State.LISTEN);
                     break;
 
                 // TODO: Expend this list

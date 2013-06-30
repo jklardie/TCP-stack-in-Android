@@ -234,7 +234,7 @@ public class TCP {
                 tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
 
                 tcb.setSendUnacknowledged(iss);
-                tcb.advanceSendNext(segment.getLen());
+                tcb.setSendNext(iss+segment.getLen());
 
                 tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
             }

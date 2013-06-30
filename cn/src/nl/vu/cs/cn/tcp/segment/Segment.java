@@ -340,8 +340,7 @@ public class Segment {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-
-        sb.append("SEQ: ").append(seq);
+        sb.append(" | SEQ: ").append(seq);
         if(isAck) sb.append(" | ACK: ").append(ack);
         sb.append(" | ");
         if(isUrg) sb.append("URG, ");

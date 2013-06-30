@@ -103,7 +103,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
             // advance receive next sequence number by the length of this segment,
             // which should be one because it only has the SYN control bit
-            tcb.advanceReceiveNext(segment.getLen());
+            tcb.setReceiveNext(segment.getSeq()+segment.getLen());
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
             // TODO: queue any other control or text for processing later (actually, can SYN contain data?).
@@ -123,7 +123,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 return;
             }
 
-            tcb.advanceSendNext(segment.getLen());
+            tcb.setSendNext(iss + segment.getLen());
             tcb.setSendUnacknowledged(iss);
 
             tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
@@ -165,7 +165,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
         if(segment.isSyn()){
             // advance receive next sequence number by the length of this segment,
             // which should be one because it only has the SYN control bit
-            tcb.advanceReceiveNext(segment.getLen());
+            tcb.setReceiveNext(segment.getSeq() + segment.getLen());
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
             tcb.setSendUnacknowledged(segment.getAck());

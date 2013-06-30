@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -28,6 +29,8 @@ public class TransmissionControlBlock {
     public static final int MAX_RETRANSMITS = 10;           // maximum number of retransmits
     private static final short IP_HEADER_SIZE = 20;           // size of IP header in bytes
     private static final short MAX_SEGMENT_SIZE = 8 * 1024 - IP_HEADER_SIZE;    // maximum packet size in bytes
+
+    private static final int MAX_RETRANSMISSION_THREADS = 5;
 
     private String TAG = "TCB";
 
@@ -57,7 +60,7 @@ public class TransmissionControlBlock {
     private short foreignPort;
 
     // sequence variables
-    private final int iss;      // initial send sequence number
+    private int iss;      // initial send sequence number
     private int irs;            // initial receive sequence number
 
     // send sequence variables (note that window and urgent pointer info is not used)
@@ -69,6 +72,8 @@ public class TransmissionControlBlock {
     // receive sequence variables
     private int rcv_nxt;        // receive - next sequence number
     private short rcv_wnd;        // receive - window
+
+    private final ScheduledExecutorService executor;
 
     private ConcurrentHashMap<RetransmissionSegment, ScheduledFuture> retransmissionMap;
     private ConcurrentLinkedQueue<Byte> transmissionQueue;
@@ -83,7 +88,9 @@ public class TransmissionControlBlock {
     public TransmissionControlBlock(IP ip, boolean isServer) {
         iss = getInitialSendSequenceNumber();
         state = State.CLOSED;
-        
+
+        executor = Executors.newScheduledThreadPool(MAX_RETRANSMISSION_THREADS);
+
         retransmissionMap = new ConcurrentHashMap<RetransmissionSegment, ScheduledFuture>();
         transmissionQueue = new ConcurrentLinkedQueue<Byte>();
         processingQueue = new ConcurrentLinkedQueue<Byte>();
@@ -230,7 +237,8 @@ public class TransmissionControlBlock {
      */
     public int getInitialSendSequenceNumber() {
         if(iss == 0){
-            // TODO: implement create
+            // TODO: implement correct create method
+            iss = new Random().nextInt(Integer.MAX_VALUE / 10);
         }
 
         return iss;
@@ -269,6 +277,14 @@ public class TransmissionControlBlock {
     }
 
     /**
+     * Set send next sequence number.
+     * @return
+     */
+    public void setSendNext(int snd_nxt){
+        this.snd_nxt = snd_nxt;
+    }
+
+    /**
      * Get send next sequence number.
      * @return
      */
@@ -295,6 +311,14 @@ public class TransmissionControlBlock {
      */
     public void advanceReceiveNext(int len){
         this.rcv_nxt += len;
+    }
+
+    /**
+     * Set receive next sequence number to rcv_nxt
+     * @param rcv_nxt
+     */
+    public void setReceiveNext(int rcv_nxt){
+        this.rcv_nxt = rcv_nxt;
     }
 
     /**
@@ -393,8 +417,7 @@ public class TransmissionControlBlock {
      * @param retransmissionSegment
      */
     public void addToRetransmissionQueue(final RetransmissionSegment retransmissionSegment){
-        ScheduledExecutorService exec = Executors.newScheduledThreadPool(1);
-        ScheduledFuture task = exec.schedule(new Runnable() {
+        ScheduledFuture task = executor.schedule(new Runnable() {
             @Override
             public void run() {
                 timeoutHandler.onRetransmissionTimeout(retransmissionSegment);
