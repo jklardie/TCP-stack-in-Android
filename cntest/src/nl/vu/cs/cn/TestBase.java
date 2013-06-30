@@ -20,7 +20,8 @@ public class TestBase extends TestCase {
     protected TCP.Socket clientSocket;
     protected TCP.Socket serverSocket;
 
-    protected void init() throws Exception {
+    @Override
+    protected void setUp() throws Exception {
         client = new UnreliableTCP(CLIENT_ADDR_LAST_OCTET);
         server = new UnreliableTCP(SERVER_ADDR_LAST_OCTET);
 
@@ -28,12 +29,21 @@ public class TestBase extends TestCase {
         serverSocket = server.socket(SERVER_PORT);
     }
 
-    protected void clearRetransmissionQueues() throws Exception {
-        // make sure all retransmission tasks are cleared (so other tests can start fresh)
-        client.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
-        server.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
+    @Override
+    protected void tearDown() throws Exception {
+        clearRetransmissionQueues();
 
         super.tearDown();
+    }
+
+    protected void clearRetransmissionQueues() throws Exception {
+        // make sure all retransmission tasks are cleared (so other tests can start fresh)
+        try {
+            client.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
+            server.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
+        } catch (Exception e) {
+            // NullPointerException
+        }
     }
 
     /**

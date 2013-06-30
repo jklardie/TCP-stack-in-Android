@@ -10,7 +10,7 @@ public class TestConnectSegmentLoss extends TestConnect {
     }
 
     public void performTestDropFirst() throws Exception {
-        Thread server = startServer(new ServerRunnable());
+        startServer(new ServerRunnable());
 
         boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
 
@@ -18,32 +18,12 @@ public class TestConnectSegmentLoss extends TestConnect {
         assertEquals(TransmissionControlBlock.State.ESTABLISHED,
                 getClientState());
 
-        // wait 15 seconds for server to finish, or continue
-        server.join(15);
+        // wait for server
+        Thread.sleep(2000);
 
         assertEquals("Three-way handshake succeeded. Server should be in ESTABLISHED state",
                 TransmissionControlBlock.State.ESTABLISHED,
                 getServerState());
-
-        clearRetransmissionQueues();
     }
 
-    public void performTestDropAll() throws Exception {
-        Thread server = startServer(new ServerRunnable());
-
-        boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
-
-        assertFalse("Expected clientSocket.connect() to return false", connected);
-        assertEquals(TransmissionControlBlock.State.CLOSED,
-                getClientState());
-
-        // wait 20 seconds for server to finish, or continue
-        server.join(20);
-
-        assertEquals("Three-way handshake failed. Server should still be in LISTEN state",
-                TransmissionControlBlock.State.LISTEN,
-                getServerState());
-
-        clearRetransmissionQueues();
-    }
 }

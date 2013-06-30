@@ -7,9 +7,7 @@ import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 public class TestConnect extends TestBase {
 
     public void testConnect() throws Exception {
-        init();
-
-        Thread server = startServer(new ServerRunnable());
+        startServer(new ServerRunnable());
 
         boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
 
@@ -18,14 +16,11 @@ public class TestConnect extends TestBase {
                 TransmissionControlBlock.State.ESTABLISHED,
                 getClientState());
 
-        // wait 15 seconds for server to finish, or continue
-        server.join(15);
+        Thread.sleep(2000);
 
         assertEquals("Server should never return before reaching the ESTABLISHED state",
                 TransmissionControlBlock.State.ESTABLISHED,
                 getServerState());
-
-        clearRetransmissionQueues();
     }
 
     protected class ServerRunnable implements Runnable {

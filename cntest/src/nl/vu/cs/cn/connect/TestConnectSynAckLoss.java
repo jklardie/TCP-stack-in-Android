@@ -3,16 +3,16 @@ package nl.vu.cs.cn.connect;
 import nl.vu.cs.cn.UnreliableIP;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
-public class TestConnectSynLoss extends TestConnectSegmentLoss {
+public class TestConnectSynAckLoss extends TestConnectSegmentLoss {
 
-    public void testDropFirstSYN() throws Exception {
-        client.dropSYN(UnreliableIP.DropType.FIRST);
+    public void testDropFirstSYNACK() throws Exception {
+        server.dropSYNACK(UnreliableIP.DropType.FIRST);
 
         performTestDropFirst();
     }
 
-    public void testDropAllSYN() throws Exception {
-        client.dropSYN(UnreliableIP.DropType.ALL);
+    public void testDropAllSYNACK() throws Exception {
+        server.dropSYNACK(UnreliableIP.DropType.ALL);
 
         startServer(new ServerRunnable());
 
@@ -22,10 +22,11 @@ public class TestConnectSynLoss extends TestConnectSegmentLoss {
         assertEquals(TransmissionControlBlock.State.CLOSED,
                 getClientState());
 
-        // wait for server
+        // Both client and server are waiting for each other to ACK packets
+        // Wait 1 second, so both have time to set states correctly
         Thread.sleep(1000);
 
-        assertEquals("Server never received SYN, so should still be SYN_RECEIVED",
+        assertEquals("Server never received ACK, should be reset to LISTEN",
                 TransmissionControlBlock.State.LISTEN,
                 getServerState());
     }
