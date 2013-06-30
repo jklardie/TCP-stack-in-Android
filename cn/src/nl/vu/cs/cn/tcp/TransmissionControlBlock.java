@@ -185,7 +185,6 @@ public class TransmissionControlBlock {
      */
     public boolean waitForAck(int seqNum){
         retransmissionLock.lock();
-        Log.i(TAG, "Waiting for ACK " + seqNum);
         try {
             int i;
             for(i=0; i<MAX_RETRANSMITS+1 && getSendUnacknowledged() <= seqNum; i++){
@@ -303,7 +302,7 @@ public class TransmissionControlBlock {
      * Set send unacknowledged sequence number.
      * @param snd_una
      */
-    public void setSendUnacknowledged(int snd_una){
+    public synchronized void setSendUnacknowledged(int snd_una){
         this.snd_una = snd_una;
     }
 
@@ -311,7 +310,7 @@ public class TransmissionControlBlock {
      * Get send unacknowledged sequence number.
      * @return
      */
-    public int getSendUnacknowledged(){
+    public synchronized int getSendUnacknowledged(){
         return snd_una;
     }
 
@@ -533,7 +532,7 @@ public class TransmissionControlBlock {
     public void removeFromRetransmissionQueue(int ack){
         int numRemoves = 0;
         for(RetransmissionSegment segment : retransmissionMap.keySet()){
-            if(segment.getSegment().getSeq() + segment.getSegment().getLen() < ack){
+            if((segment.getSegment().getSeq() + segment.getSegment().getLen() - 1) < ack){
                 retransmissionMap.remove(segment).cancel(true);
                 Log.v(TAG, "Removed segment " + segment.getSegment().getSeq() + " from retransmission queue");
                 numRemoves++;
