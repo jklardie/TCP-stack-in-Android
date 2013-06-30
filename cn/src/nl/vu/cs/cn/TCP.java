@@ -111,11 +111,40 @@ public class TCP {
                 return -1;
             case ESTABLISHED:
             case CLOSE_WAIT:
-                // segmentize buffer and send it with a piggybacked ACK
-                // TODO: implement
-                Log.v(TAG, "send(): buffer segmentized and piggybacked with ACK");
+                // Send data to receiver (segmentize where necessary)
+                int copiedData = 0;
+                int lastSeqNum;
+                do {
+                    synchronized (tcb){
+                        Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                        copiedData += outSegment.setData(buf, offset, len);
+                        lastSeqNum = outSegment.getSeq() + outSegment.getLen() - 1;
+                        IP.Packet packet = IPUtil.getPacket(outSegment);
+                        try {
+                            Log.v(TAG, "Sending: " + outSegment.toString());
+                            ip.ip_send(packet);
+                            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+                        } catch (IOException e) {
+                            // TODO: howto handle this? For now just ignore
+                            Log.e(TAG, "Error while sending data", e);
+                            return -1;
+                        }
+
+                        tcb.advanceSendNext(outSegment.getLen());
+                    }
+
+                } while (copiedData < len);
+
                 sendIssued = true;
-                // TODO: don't forget return here
+
+                // wait until all segments have been acknowledged
+                boolean acknowledged = tcb.waitForAck(lastSeqNum);
+
+                if(!acknowledged){
+                    Log.w(TAG, "Segment not acknowledged. Was waiting for " + lastSeqNum + ", but got " + tcb.getSendUnacknowledged());
+                }
+
+                return (acknowledged) ? copiedData : -1;
             default:
                 Log.e(TAG, "Error in send(): connection closing");
                 return -1;
@@ -150,16 +179,22 @@ public class TCP {
             case FIN_WAIT_2:
                 if(!tcb.hasDataToProcess()){
                     Log.v(TAG, "receive(): call queued until segments arrive");
-                    // TODO: Queue receive for processing after segments come in
-                    // e.g. block until new data is received
+                    tcb.waitForDataToProcess();
                 }
+
                 Log.v(TAG, "receive(): returning data from processing queue");
                 return tcb.getDataToProcess(buf, offset, maxlen);
             case CLOSE_WAIT:
+                /*
+                 * Since the remote side has already sent FIN, RECEIVEs must be
+                 * satisfied by text already on hand, but not yet delivered to the
+                 * user.
+                 */
                 if(!tcb.hasDataToProcess()){
                     Log.e(TAG, "Error in receive(): connection closing");
-                    return -1;
+                    return 0;
                 }
+
                 Log.v(TAG, "receive(): returning data from processing queue");
                 return tcb.getDataToProcess(buf, offset, maxlen);
             default:
@@ -323,7 +358,7 @@ public class TCP {
                     // e.g. block until state == established, and process close
                     return true;
                 case ESTABLISHED:
-                    // TODO: Queue this close until all preceding SENDs have been segmentized,
+                    // TODO: Queue this close until all preceding SENDs have finished
 
                     // sending FIN until entering FIN_WAIT_1 state should be synchronized
                     synchronized (tcb){
