@@ -153,7 +153,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
         if(segment.isAck()){
             if(segment.getAck() <= tcb.getInitialSendSequenceNumber() ||
                     segment.getAck() > tcb.getSendNext()){
-                // Normally a RESET would be sent, but that is not supported in this situation.
+                // ACK outisde window. Normally a RESET would be sent, but that is not supported in this situation.
                 Log.w(TAG, "onSegmentArrive(): unexpected ACK num (segment discarded)");
                 return;
             } else if(tcb.getSendUnacknowledged() <= segment.getAck() &&
@@ -232,8 +232,10 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
                 } else {
                     // RESET should be send, not supported though.
+                    // TODO: should we accept the data and fin if the ACK is incorrect?
+                    // This should never happen as we already check ACK validity earlier
+                    return true;
                 }
-                break;
             case ESTABLISHED:
             case FIN_WAIT_1:
             case FIN_WAIT_2:
@@ -268,8 +270,11 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     // TODO: check if retransmission queue is empty. If so:
                     // return OK to users close call
                 } else if (tcb.getState() == TransmissionControlBlock.State.CLOSING) {
-                    // TODO: check if this ACK acks our FIN. If so:
-                    tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
+                    if(segment.getAck() > tcb.getUnacknowledgedFin()){
+                        // This ACK ACKs our FIN, so move to TIME_WAIT and start timer
+                        tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
+                        tcb.startTimeWaitTimer();
+                    }
                     // otherwise: ignore segment:
                     return false;
                 }
@@ -280,7 +285,10 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 return false;
             case TIME_WAIT:
                 // The only thing that can arrive in this state is a retransmission of the remote FIN.
-                // TODO: send ACK and restart 2*MSL timeout
+                // ACK will be sent handleSegmentFin() method
+
+                // (re)start timer
+                tcb.startTimeWaitTimer();
                 break;
         }
 
@@ -348,7 +356,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
         } catch (IOException e) {
             Log.e(TAG, "Error while sending ACK for FIN", e);
             // TODO: howto handle this? For now let other party send FIN again (they did not get the ACK)
-            return;
         }
 
         switch(tcb.getState()){
@@ -361,6 +368,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 if(segment.getAck() > tcb.getUnacknowledgedFin()){
                     tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
                     // TODO: start time-wait timer, turn of other timers
+                    tcb.startTimeWaitTimer();
                 } else {
                     // simultaneous close
                     tcb.enterState(TransmissionControlBlock.State.CLOSING);
@@ -369,7 +377,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 return;
             case FIN_WAIT_2:
                 tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
-                // TODO: start time-wait timer, turn of other timers
+                tcb.startTimeWaitTimer();
                 return;
             case CLOSE_WAIT:
             case CLOSING:
@@ -377,8 +385,8 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 // do nothing, stay in same state
                 return;
             case TIME_WAIT:
-                // remain in TIME_WAIT state
-                // TODO: start 2 * MSL timer
+                // remain in TIME_WAIT state, restart timer
+                tcb.startTimeWaitTimer();
                 return;
         }
     }
