@@ -1,12 +1,18 @@
 package nl.vu.cs.cn.close;
 
 
+import java.util.concurrent.CountDownLatch;
+
 import nl.vu.cs.cn.TestBase;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
-public class TestClose extends TestBase {
+public class TestSimultaneousClose extends TestBase {
+
+    private CountDownLatch latch;
 
     public void testClose() throws Exception {
+        latch = new CountDownLatch(2);
+
         startServer(new ServerRunnable());
 
         // make sure we are connected (both client and server)
@@ -17,14 +23,20 @@ public class TestClose extends TestBase {
                 TransmissionControlBlock.State.ESTABLISHED,
                 getClientState());
 
+        // set ip packet latency to 1s so we can perform the simultaneous close
+        client.setIPSendLatency(3000);
+        server.setIPSendLatency(3000);
+
         Thread.sleep(1000);
 
-        assertEquals("Server should never return before reaching the ESTABLISHED state",
-                TransmissionControlBlock.State.ESTABLISHED,
-                getServerState());
+        // synchronize client and server so they both close at the same time
+        latch.countDown();
 
         // start close procedure
         boolean closed = clientSocket.close();
+
+        // give both threads to finish TIME WAIT timer
+        Thread.sleep(TransmissionControlBlock.TIME_WAIT_TIMEOUT_SEC*1000 + 1000);
 
         // test client part
         assertTrue("Expected clientSocket.close() to return true", closed);
@@ -44,11 +56,12 @@ public class TestClose extends TestBase {
         public void run() {
             serverSocket.accept();
 
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            // set ip packet latency to 1s so we can perform the simultaneous close
+            client.setIPSendLatency(3000);
+            server.setIPSendLatency(3000);
+
+            // synchronize client and server so they both close at the same time
+            latch.countDown();
 
             serverSocket.close();
         }
