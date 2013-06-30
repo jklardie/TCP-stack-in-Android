@@ -27,10 +27,13 @@ public class TransmissionControlBlock {
 
     private static final int RETRANSMIT_TIMEOUT_SEC = 1;    // number of time before retransmit
     public static final int MAX_RETRANSMITS = 10;           // maximum number of retransmits
+    public static final int TIME_WAIT_TIMEOUT_SEC = 5;     // number of time TIME WAIT should wait before entering CLOSE
+
     private static final short IP_HEADER_SIZE = 20;           // size of IP header in bytes
     private static final short MAX_SEGMENT_SIZE = 8 * 1024 - IP_HEADER_SIZE;    // maximum packet size in bytes
 
     private static final int MAX_RETRANSMISSION_THREADS = 5;
+
 
     private String TAG = "TCB";
 
@@ -82,6 +85,8 @@ public class TransmissionControlBlock {
     private ConcurrentLinkedQueue<Byte> processingQueue;
 
     private TimeoutHandler timeoutHandler;
+    private ScheduledFuture timeWaitScheduledFuture;
+
 
     /**
      * Create a new transmission control block (TCB) to hold connection state information.
@@ -424,7 +429,7 @@ public class TransmissionControlBlock {
 
     
     ////////////////////////
-    // Retransmission methods
+    // 'Timeout' methods
     ////////////////////////
 
     /**
@@ -474,7 +479,23 @@ public class TransmissionControlBlock {
             scheduledFuture.cancel(true);
             return true;
         }
+
         return false;
     }
 
+    public void startTimeWaitTimer(){
+        if(timeWaitScheduledFuture != null){
+            Log.v(TAG, "Restarting TIME WAIT timer ("+ TIME_WAIT_TIMEOUT_SEC+" sec)");
+            timeWaitScheduledFuture.cancel(true);
+        } else {
+            Log.v(TAG, "Starting TIME WAIT timer ("+ TIME_WAIT_TIMEOUT_SEC+" sec)");
+        }
+
+        timeWaitScheduledFuture = executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                timeoutHandler.onTimeWaitTimeout();
+            }
+        }, TIME_WAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+    }
 }
