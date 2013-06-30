@@ -46,8 +46,20 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 default:
                     // first check sequence number
                     if(!acceptableSegment(segment)){
-                        Log.w(TAG, "onSegmentArrive(): unacceptable segment received. Dropping segment");
-                        // TODO: send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                        Log.w(TAG, "onSegmentArrive(): unacceptable segment (" + segment.toString() + ") received. Dropping segment");
+
+                        // send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                        Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                        IP.Packet packet = IPUtil.getPacket(outSegment);
+                        try {
+                            Log.v(TAG, "Sending: " + outSegment.toString());
+                            ip.ip_send(packet);
+                            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+                        } catch (IOException e) {
+                            Log.e(TAG, "Error while sending ACK", e);
+                            // TODO: howto handle this? For now just ignore
+                        }
+
                         return;
                     } else {
                         // TODO: ??
@@ -186,6 +198,8 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     Log.v(TAG, "Sending: " + outSegment.toString());
                     ip.ip_send(packet);
                     tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+                    tcb.setSendUnacknowledged(outSegment.getSeq());
+                    tcb.advanceSendNext(outSegment.getLen());
                 } catch (IOException e) {
                     Log.e(TAG, "Error while sending SYN ACK", e);
 
@@ -246,8 +260,10 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 }
 
                 if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_1) {
-                    // TODO: check if FIN is acknowledged. If so, enter FIN_WAIT_2 state
-                    tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_2);
+                    // Check if our FIN has been ACKed
+                    if(segment.getAck() > tcb.getUnacknowledgedFin()){
+                        tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_2);
+                    }
                 } else if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_2) {
                     // TODO: check if retransmission queue is empty. If so:
                     // return OK to users close call
@@ -327,6 +343,8 @@ public class SegmentHandler implements OnSegmentArriveListener {
             Log.v(TAG, "Sending: " + outSegment.toString());
             ip.ip_send(packet);
             tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+            tcb.setSendUnacknowledged(outSegment.getSeq());
+            tcb.advanceSendNext(outSegment.getLen());
         } catch (IOException e) {
             Log.e(TAG, "Error while sending ACK for FIN", e);
             // TODO: howto handle this? For now let other party send FIN again (they did not get the ACK)
@@ -339,11 +357,15 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 tcb.enterState(TransmissionControlBlock.State.CLOSE_WAIT);
                 return;
             case FIN_WAIT_1:
-                // TODO: check if our FIN has been ACKED. if so:
-                tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
-                // TODO: start time-wait timer, turn of other timers
-                // else:
-                tcb.enterState(TransmissionControlBlock.State.CLOSING);
+                // Check if our FIN has been ACKed
+                if(segment.getAck() > tcb.getUnacknowledgedFin()){
+                    tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
+                    // TODO: start time-wait timer, turn of other timers
+                } else {
+                    // simultaneous close
+                    tcb.enterState(TransmissionControlBlock.State.CLOSING);
+                }
+
                 return;
             case FIN_WAIT_2:
                 tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
