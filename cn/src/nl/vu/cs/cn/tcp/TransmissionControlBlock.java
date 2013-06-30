@@ -30,7 +30,7 @@ public class TransmissionControlBlock {
     public static final int TIME_WAIT_TIMEOUT_SEC = 5;     // number of time TIME WAIT should wait before entering CLOSE
 
     private static final short IP_HEADER_SIZE = 20;           // size of IP header in bytes
-    private static final short MAX_SEGMENT_SIZE = 8 * 1024 - IP_HEADER_SIZE;    // maximum packet size in bytes
+    public static final short MAX_SEGMENT_SIZE = 8 * 1024 - IP_HEADER_SIZE;    // maximum packet size in bytes
 
     private static final int MAX_RETRANSMISSION_THREADS = 5;
 
@@ -80,9 +80,15 @@ public class TransmissionControlBlock {
 
     private final ScheduledExecutorService executor;
 
-    private ConcurrentHashMap<RetransmissionSegment, ScheduledFuture> retransmissionMap;
     private ConcurrentLinkedQueue<Byte> transmissionQueue;
     private ConcurrentLinkedQueue<Byte> processingQueue;
+    private final Lock processingQueueLock = new ReentrantLock();
+    private final Condition hasDataForProcessing = processingQueueLock.newCondition();
+
+
+    private ConcurrentHashMap<RetransmissionSegment, ScheduledFuture> retransmissionMap;
+    private final Lock retransmissionLock = new ReentrantLock();
+    private final Condition retransmissionQueueChanged = retransmissionLock.newCondition();
 
     private TimeoutHandler timeoutHandler;
     private ScheduledFuture timeWaitScheduledFuture;
@@ -163,6 +169,40 @@ public class TransmissionControlBlock {
             // condition has been met, done waiting!
         } finally {
             stateLock.unlock();
+        }
+    }
+
+    /**
+     * Wait until the specified sequence number has been ACKed. Note that
+     * if you want to wait for the full packet to be acked, make sure to use
+     * the last segment number of the packet (SEG.SEQ + SEG.LEN - 1)
+     *
+     * This has happened when the segment with the given sequence number is
+     * removed from the retransmission queue.
+     *
+     * @param seqNum
+     * @return true if and only if the packet has been ACKed within the number of retries
+     */
+    public boolean waitForAck(int seqNum){
+        retransmissionLock.lock();
+        Log.i(TAG, "Waiting for ACK " + seqNum);
+        try {
+            int i;
+            for(i=0; i<MAX_RETRANSMITS+1 && getSendUnacknowledged() <= seqNum; i++){
+                try {
+                    retransmissionQueueChanged.await();
+                } catch (InterruptedException e) {
+                    // ignore, wait again
+                }
+            }
+
+            // either the packet has been met, or the number of retransmits have been
+            // reached, and the packet did not arrive
+            Log.v(TAG, "Packet " + seqNum + " acnowledged? : " + (seqNum < getSendUnacknowledged()));
+
+            return seqNum < getSendUnacknowledged();
+        } finally {
+            retransmissionLock.unlock();
         }
     }
 
@@ -401,6 +441,15 @@ public class TransmissionControlBlock {
         for(i=0; i<len; i++){
             processingQueue.add(buf[offset+i]);
         }
+
+        // notify threads waiting for data to process
+        processingQueueLock.lock();
+        try {
+            hasDataForProcessing.signalAll();
+        } finally {
+            processingQueueLock.unlock();
+        }
+
         return i;
     }
 
@@ -409,7 +458,31 @@ public class TransmissionControlBlock {
      * @return true if and only if there is data queued to transmit. False otherwise
      */
     public boolean hasDataToProcess(){
-        return processingQueue.size() > 0;
+        processingQueueLock.lock();
+        try {
+            return processingQueue.size() > 0;
+        } finally {
+            processingQueueLock.unlock();
+        }
+    }
+
+    /**
+     * Block until there is data to process
+     */
+    public void waitForDataToProcess(){
+        processingQueueLock.lock();
+
+        try {
+            while(!hasDataToProcess()){
+                try {
+                    hasDataForProcessing.await();
+                } catch (InterruptedException e) {
+                    // ignore, wait again
+                }
+            }
+        } finally {
+            processingQueueLock.unlock();
+        }
     }
 
     /**
@@ -457,13 +530,26 @@ public class TransmissionControlBlock {
      * smaller than the ack number
      * @param ack
      */
-    public synchronized void removeFromRetransmissionQueue(int ack){
+    public void removeFromRetransmissionQueue(int ack){
+        int numRemoves = 0;
         for(RetransmissionSegment segment : retransmissionMap.keySet()){
-            if(segment.getSegment().getSeq() < ack){
+            if(segment.getSegment().getSeq() + segment.getSegment().getLen() < ack){
                 retransmissionMap.remove(segment).cancel(true);
                 Log.v(TAG, "Removed segment " + segment.getSegment().getSeq() + " from retransmission queue");
+                numRemoves++;
             }
         }
+
+        // if segments have been removed (because they where ACKed) signal waiting threads
+        if(numRemoves > 0){
+            retransmissionLock.lock();
+            try {
+                retransmissionQueueChanged.signalAll();
+            } finally {
+                retransmissionLock.unlock();
+            }
+        }
+
     }
 
     /**
