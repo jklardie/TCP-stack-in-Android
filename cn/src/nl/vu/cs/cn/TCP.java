@@ -328,6 +328,9 @@ public class TCP {
                             return false;
                         }
 
+                        tcb.setSendUnacknowledged(segment.getSeq());
+                        tcb.advanceSendNext(segment.getLen());
+
                         tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
                         tcb.setUnacknowledgedFin(segment.getSeq());
                     }
@@ -344,8 +347,31 @@ public class TCP {
                     return false;
                 case CLOSE_WAIT:
                     // TODO: Queue this request until all preceding SENDs have been segmentized;
-                    // then send a FIN segment, enter CLOSING state.
-                    // TODO: don't forget the return here
+
+                    // Send a FIN segment, enter LAST_ACK state
+                    synchronized (tcb){
+                        Segment segment = SegmentUtil.getFINPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                        IP.Packet packet = IPUtil.getPacket(segment);
+                        try {
+                            Log.v(TAG, "Sending: " + segment.toString());
+                            ip.ip_send(packet);
+                        } catch (IOException e) {
+                            Log.e(TAG, "Error while sending FIN", e);
+                            return false;
+                        }
+
+                        tcb.setSendUnacknowledged(segment.getSeq());
+                        tcb.advanceSendNext(segment.getLen());
+
+                        tcb.enterState(TransmissionControlBlock.State.LAST_ACK);
+                        tcb.setUnacknowledgedFin(segment.getSeq());
+                    }
+
+                    // Wait until state is CLOSED
+                    Log.v(TAG, "close(): waiting until state becomes CLOSED");
+                    tcb.waitForStates(TransmissionControlBlock.State.CLOSED);
+
+                    return true;
                 default:
                     // TODO: according to assignment this should return true (according to RFC it should return false)
                     Log.e(TAG, "Error in close(): connection closing");
