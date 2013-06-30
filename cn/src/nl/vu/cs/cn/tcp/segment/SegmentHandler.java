@@ -198,7 +198,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     Log.v(TAG, "Sending: " + outSegment.toString());
                     ip.ip_send(packet);
                     tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
-                    tcb.setSendUnacknowledged(outSegment.getSeq());
                     tcb.advanceSendNext(outSegment.getLen());
                 } catch (IOException e) {
                     Log.e(TAG, "Error while sending SYN ACK", e);
@@ -351,7 +350,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
             Log.v(TAG, "Sending: " + outSegment.toString());
             ip.ip_send(packet);
             tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
-            tcb.setSendUnacknowledged(outSegment.getSeq());
             tcb.advanceSendNext(outSegment.getLen());
         } catch (IOException e) {
             Log.e(TAG, "Error while sending ACK for FIN", e);
