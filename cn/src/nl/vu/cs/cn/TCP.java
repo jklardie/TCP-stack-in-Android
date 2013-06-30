@@ -315,8 +315,27 @@ public class TCP {
                     return true;
                 case ESTABLISHED:
                     // TODO: Queue this close until all preceding SENDs have been segmentized,
-                    // then form a FIN segment and send it (e.g wait until ... something)
-                    tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
+
+                    // sending FIN until entering FIN_WAIT_1 state should be synchronized
+                    synchronized (tcb){
+                        Segment segment = SegmentUtil.getFINPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                        IP.Packet packet = IPUtil.getPacket(segment);
+                        try {
+                            Log.v(TAG, "Sending: " + segment.toString());
+                            ip.ip_send(packet);
+                        } catch (IOException e) {
+                            Log.e(TAG, "Error while sending FIN", e);
+                            return false;
+                        }
+
+                        tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
+                        tcb.setUnacknowledgedFin(segment.getSeq());
+                    }
+
+                    // Wait until state is CLOSED
+                    Log.v(TAG, "close(): waiting until state becomes CLOSED");
+                    tcb.waitForStates(TransmissionControlBlock.State.CLOSED);
+
                     return true;
                 case FIN_WAIT_1:
                 case FIN_WAIT_2:
@@ -328,7 +347,7 @@ public class TCP {
                     // then send a FIN segment, enter CLOSING state.
                     // TODO: don't forget the return here
                 default:
-                    // TODO: according to assignment this should return true
+                    // TODO: according to assignment this should return true (according to RFC it should return false)
                     Log.e(TAG, "Error in close(): connection closing");
                     return false;
             }
