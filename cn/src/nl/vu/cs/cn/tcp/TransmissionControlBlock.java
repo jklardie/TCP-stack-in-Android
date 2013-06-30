@@ -434,14 +434,17 @@ public class TransmissionControlBlock {
      * @param retransmissionSegment
      */
     public void addToRetransmissionQueue(final RetransmissionSegment retransmissionSegment){
-        ScheduledFuture task = executor.schedule(new Runnable() {
-            @Override
-            public void run() {
-                timeoutHandler.onRetransmissionTimeout(retransmissionSegment);
-            }
-        }, RETRANSMIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+        // only segments with length > 0 (so either contains data, SYN of FIN) needs to be retransmitted
+        if(retransmissionSegment.getSegment().getLen() > 0){
+            ScheduledFuture task = executor.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    timeoutHandler.onRetransmissionTimeout(retransmissionSegment);
+                }
+            }, RETRANSMIT_TIMEOUT_SEC, TimeUnit.SECONDS);
 
-        retransmissionMap.put(retransmissionSegment, task);
+            retransmissionMap.put(retransmissionSegment, task);
+        }
     }
 
     /**
@@ -449,10 +452,11 @@ public class TransmissionControlBlock {
      * smaller than the ack number
      * @param ack
      */
-    public void removeFromRetransmissionQueue(int ack){
+    public synchronized void removeFromRetransmissionQueue(int ack){
         for(RetransmissionSegment segment : retransmissionMap.keySet()){
             if(segment.getSegment().getSeq() < ack){
                 retransmissionMap.remove(segment).cancel(true);
+                Log.v(TAG, "Removed segment " + segment.getSegment().getSeq() + " from retransmission queue");
             }
         }
     }
@@ -463,7 +467,6 @@ public class TransmissionControlBlock {
      * @return true if and only if the segment existed (and was removed)
      */
     public boolean removeFromRetransmissionQueue(RetransmissionSegment retransmissionSegment) {
-        Log.v(TAG, "Removing segment " + retransmissionSegment.getSegment().getSeq() + " from retransmission queue");
         ScheduledFuture scheduledFuture = retransmissionMap.remove(retransmissionSegment);
 
         if(scheduledFuture != null){
