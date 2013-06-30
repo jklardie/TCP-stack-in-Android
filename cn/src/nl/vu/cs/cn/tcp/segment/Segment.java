@@ -1,9 +1,11 @@
 package nl.vu.cs.cn.tcp.segment;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.Util;
 
 /**
@@ -39,6 +41,8 @@ public class Segment {
      * - Checksum + Urgent pointer
      */
     private static final short DATA_OFFSET = 5;
+
+    private static final short HEADER_SIZE = DATA_OFFSET * 4;
 
     private IP.IpAddress sourceAddr;
     private IP.IpAddress destinationAddr;
@@ -199,6 +203,31 @@ public class Segment {
         return data;
     }
 
+    /**
+     * Copy bytes from data (starting at offset, maximum of either len or max data size)
+     * into the data field.
+     * @param data
+     * @param offset
+     * @param len
+     * @return number of bytes copied into the data field
+     */
+    public int setData(byte[] data, int offset, int len){
+        len = Math.min(TransmissionControlBlock.MAX_SEGMENT_SIZE - HEADER_SIZE, len);
+        this.data = new byte[len];
+        System.arraycopy(data, offset, this.data, 0, len);
+        return len;
+    }
+
+    /**
+     * Copy bytes from data into the data field. This is the same as calling
+     * setData(data, 0, data.length).
+     * @param data
+     * @return
+     */
+    public int setData(byte[] data){
+        return setData(data, 0, data.length);
+    }
+
     public int getDataLength(){
         return (data == null) ? 0 : data.length;
     }
@@ -256,7 +285,7 @@ public class Segment {
     }
 
     public byte[] encode(){
-        int capacity = DATA_OFFSET * 4; // capacity in bytes
+        int capacity = HEADER_SIZE; // capacity in bytes
         if(getDataLength() > 0){
             capacity += data.length;
         }
@@ -349,7 +378,11 @@ public class Segment {
         if(isRst) sb.append("RST, ");
         if(isSyn) sb.append("SYN, ");
         if(isFin) sb.append("FIN ");
-        if(getDataLength() > 0) sb.append(" | [").append(data).append("]");
+        if(getDataLength() > 0) try {
+            sb.append(" | [").append(new String(data, "UTF-8")).append("]");
+        } catch (UnsupportedEncodingException e) {
+            sb.append(" | [").append(new String(data)).append("]");
+        }
 
         return sb.toString();
     }
