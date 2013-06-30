@@ -68,6 +68,8 @@ public class TransmissionControlBlock {
     private int snd_nxt;        // send - next sequence number
     private short snd_wnd;        // send - window (offset of snd_una)
 
+    private int fin_una;        // unacknowledged FIN sequence number
+
 
     // receive sequence variables
     private int rcv_nxt;        // receive - next sequence number
@@ -337,6 +339,21 @@ public class TransmissionControlBlock {
         return rcv_wnd;
     }
 
+    /**
+     * Set unacknowledged FIN sequence number
+     * @param fin_una
+     */
+    public void setUnacknowledgedFin(int fin_una){
+        this.fin_una = fin_una;
+    }
+
+    /**
+     * Get the unacknowledged FIN sequence number
+     * @return
+     */
+    public int getUnacknowledgedFin(){
+        return fin_una;
+    }
 
 
 
