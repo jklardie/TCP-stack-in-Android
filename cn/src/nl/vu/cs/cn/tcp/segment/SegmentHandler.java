@@ -209,58 +209,61 @@ public class SegmentHandler implements OnSegmentArriveListener {
      * @return true if and only if the processing of the segment should continue
      */
     private boolean handleACKArriveInDefaultState(Segment segment){
-        if(tcb.getState() == TransmissionControlBlock.State.SYN_RECEIVED){
-            if(tcb.getSendUnacknowledged() <= segment.getAck() &&
-                    segment.getAck() <= tcb.getSendNext()){
-                tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
-            } else {
-                // RESET should be send, not supported though.
-            }
+        switch (tcb.getState()) {
+            case SYN_RECEIVED:
+                if (tcb.getSendUnacknowledged() <= segment.getAck() &&
+                        segment.getAck() <= tcb.getSendNext()) {
+                    tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
+                } else {
+                    // RESET should be send, not supported though.
+                }
+                break;
+            case ESTABLISHED:
+            case FIN_WAIT_1:
+            case FIN_WAIT_2:
+            case CLOSE_WAIT:
+            case CLOSING:
+                if (tcb.getSendUnacknowledged() < segment.getAck() &&
+                        segment.getAck() <= tcb.getSendNext()) {
+                    tcb.setSendUnacknowledged(segment.getAck());
+                    tcb.removeFromRetransmissionQueue(segment.getAck());
 
-        } else if(tcb.getState() == TransmissionControlBlock.State.ESTABLISHED){
-            if(tcb.getSendUnacknowledged() < segment.getAck() &&
-                    segment.getAck() <= tcb.getSendNext()){
-                tcb.setSendUnacknowledged(segment.getAck());
-                tcb.removeFromRetransmissionQueue(segment.getAck());
+                    // TODO: Users should receive positive acknowledgments for buffers
+                    // which have been SENT and fully acknowledged
+                } else if (segment.getAck() < tcb.getSendUnacknowledged()) {
+                    Log.v(TAG, "onSegmentArrive(): duplicate ACK received. Ignoring");
+                } else if (segment.getAck() > tcb.getSendNext()) {
+                    Log.v(TAG, "onSegmentArrive(): ACK acks non-sent seq num. Dropping segment");
+                    // TODO: send ACK
+                    return false;
+                }
 
-                // TODO: Users should receive positive acknowledgments for buffers
-                // which have been SENT and fully acknowledged
-            } else if(segment.getAck() < tcb.getSendUnacknowledged()){
-                Log.v(TAG, "onSegmentArrive(): duplicate ACK received. Ignoring");
-            } else if(segment.getAck() > tcb.getSendNext()){
-                Log.v(TAG, "onSegmentArrive(): ACK acks non-sent seq num. Dropping segment");
-                // TODO: send ACK
+                if (tcb.getSendUnacknowledged() < segment.getAck() &&
+                        segment.getAck() <= tcb.getSendNext()) {
+                    // TODO: normally window size would be updated here. However, that is not supported in this implementation
+                }
+
+                if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_1) {
+                    // TODO: check if FIN is acknowledged. If so, enter FIN_WAIT_2 state
+                    tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_2);
+                } else if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_2) {
+                    // TODO: check if retransmission queue is empty. If so:
+                    // return OK to users close call
+                } else if (tcb.getState() == TransmissionControlBlock.State.CLOSING) {
+                    // TODO: check if this ACK acks our FIN. If so:
+                    tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
+                    // otherwise: ignore segment:
+                    return false;
+                }
+                break;
+            case LAST_ACK:
+                // The only thing that can arrive in this state is an acknowledgment of our FIN.
+                tcb.enterState(TransmissionControlBlock.State.CLOSED);
                 return false;
-            }
-
-            if(tcb.getSendUnacknowledged() < segment.getAck() &&
-                    segment.getAck() <= tcb.getSendNext()){
-                // TODO: update send window according to page 72
-            }
-
-        } else if(tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_1){
-            // TODO: same as in ESTABLISHED state
-            // TODO: check if FIN is acknowledged. If so, enter FIN_WAIT_2 state
-            tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_2);
-        } else if(tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_2){
-            // TODO: same as in ESTABLISHED state
-            // TODO: check if retransmission queue is empty. If so:
-            // return OK to users close call
-        } else if(tcb.getState() == TransmissionControlBlock.State.CLOSE_WAIT){
-            // TODO: same as in ESTABLISHED state
-        } else if(tcb.getState() == TransmissionControlBlock.State.CLOSING){
-            // TODO: same as in ESTABLISHED state
-            // TODO: check if this ACK acks our FIN. If so:
-            tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
-            // otherwise: ignore segment:
-            return false;
-        } else if(tcb.getState() == TransmissionControlBlock.State.LAST_ACK){
-            // The only thing that can arrive in this state is an acknowledgment of our FIN.
-            tcb.enterState(TransmissionControlBlock.State.CLOSED);
-            return false;
-        } else if(tcb.getState() == TransmissionControlBlock.State.TIME_WAIT){
-            // The only thing that can arrive in this state is a retransmission of the remote FIN.
-            // TODO: send ACK and restart 2*MSL timeout
+            case TIME_WAIT:
+                // The only thing that can arrive in this state is a retransmission of the remote FIN.
+                // TODO: send ACK and restart 2*MSL timeout
+                break;
         }
 
         return true;
