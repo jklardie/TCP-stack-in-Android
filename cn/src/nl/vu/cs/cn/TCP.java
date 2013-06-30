@@ -94,16 +94,21 @@ public class TCP {
                 return -1;
             case SYN_SENT:
             case SYN_RECEIVED:
-                // Queue data for transmission after entering ESTABLISHED state
-                int bytesQueued = tcb.queueDataForTransmission(buf, offset, len);
-                if(bytesQueued < len){
-                    // this will (should) never happen. Adding data to queue always succeeds
-                    Log.e(TAG, "Error in send(): insufficient resources");
-                    return -1;
-                }
-                Log.v(TAG, "send(): data queued for transmission after entering ESTABLISHED");
-                // TODO: should we already return, or wait for ACK?
-                return bytesQueued;
+                    // TODO: possibly use this later. For now unsupported
+//                // Queue data for transmission after entering ESTABLISHED state
+//                int bytesQueued = tcb.queueDataForTransmission(buf, offset, len);
+//                if(bytesQueued < len){
+//                    // this will (should) never happen. Adding data to queue always succeeds
+//                    Log.e(TAG, "Error in send(): insufficient resources");
+//                    return -1;
+//                }
+//                Log.v(TAG, "send(): data queued for transmission after entering ESTABLISHED. Waiting for ACK");
+//
+//                // TODO: should we already return, or wait for ACK?
+//                return bytesQueued;
+
+                Log.e(TAG, "Error in send(): connection not ESTABLISHED");
+                return -1;
             case ESTABLISHED:
             case CLOSE_WAIT:
                 // segmentize buffer and send it with a piggybacked ACK
@@ -132,10 +137,14 @@ public class TCP {
             case LISTEN:
             case SYN_SENT:
             case SYN_RECEIVED:
-                Log.v(TAG, "receive(): call queued until state is ESTABLISHED");
-                // TODO: Queue receive for processing after entering ESTABLISHED state
-                // e.g. block until state == established, and process receive
-                // TODO: don't forget return here.
+                // TODO: unsupported for now.
+//                Log.v(TAG, "receive(): call queued until state is ESTABLISHED");
+//                // TODO: Queue receive for processing after entering ESTABLISHED state
+//                // e.g. block until state == established, and process receive
+//                // TODO: don't forget return here.
+
+                Log.e(TAG, "Error in receive(): connection not ESTABLISHED");
+                return -1;
             case ESTABLISHED:
             case FIN_WAIT_1:
             case FIN_WAIT_2:
