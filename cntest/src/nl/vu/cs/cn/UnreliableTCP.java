@@ -26,4 +26,8 @@ public class UnreliableTCP extends TCP {
     public void dropACK(UnreliableIP.DropType type, double... dropRates){
         unreliableIP.dropACK(type, dropRates);
     }
+
+    public void setIPSendLatency(long sendLatencyMs){
+        unreliableIP.setIPSendLatency(sendLatencyMs);
+    }
 }

@@ -25,6 +25,7 @@ public class UnreliableIP extends IP {
     private DropType dropSYNACKType = DropType.NONE;
     private DropType dropACKType = DropType.NONE;
     private double dropSYNRate, dropSYNACKRate, dropACKRate;
+    private long sendLatencyMs;
 
     public UnreliableIP(int address) throws IOException {
         super(address);
@@ -49,6 +50,11 @@ public class UnreliableIP extends IP {
         if(dropRates.length > 0){
             dropACKRate = dropRates[0];
         }
+    }
+
+    protected void setIPSendLatency(long sendLatencyMs){
+        Log.v("UnreliableIP", "Setting latency to " + sendLatencyMs);
+        this.sendLatencyMs = sendLatencyMs;
     }
 
     @Override
@@ -88,6 +94,14 @@ public class UnreliableIP extends IP {
             droppedACK = true;
             return dataClone.length;
 
+        }
+
+        if(sendLatencyMs > 0){
+            try {
+                Thread.sleep(sendLatencyMs);
+            } catch (InterruptedException e) {
+                // ignore interrupt
+            }
         }
 
         // normally send packet
