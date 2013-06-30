@@ -138,6 +138,8 @@ public class SegmentHandler implements OnSegmentArriveListener {
             }
 
             tcb.setSendNext(iss + segment.getLen());
+
+            // initial packet so set snd_una
             tcb.setSendUnacknowledged(iss);
 
             tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
@@ -177,11 +179,12 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
         // Fourthly, check syn
         if(segment.isSyn()){
-            // advance receive next sequence number by the length of this segment,
+            // set receive next sequence number by the length of this segment,
             // which should be one because it only has the SYN control bit
             tcb.setReceiveNext(segment.getSeq() + segment.getLen());
             tcb.setInitialReceiveSequenceNumber(segment.getSeq());
 
+            // first packet, so we need to set snd_una
             tcb.setSendUnacknowledged(segment.getAck());
             tcb.removeFromRetransmissionQueue(segment.getAck());
 
@@ -244,9 +247,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
                         segment.getAck() <= tcb.getSendNext()) {
                     tcb.setSendUnacknowledged(segment.getAck());
                     tcb.removeFromRetransmissionQueue(segment.getAck());
-
-                    // TODO: Users should receive positive acknowledgments for buffers
-                    // which have been SENT and fully acknowledged
                 } else if (segment.getAck() < tcb.getSendUnacknowledged()) {
                     Log.v(TAG, "onSegmentArrive(): duplicate ACK received. Ignoring");
                 } else if (segment.getAck() > tcb.getSendNext()) {
@@ -305,12 +305,21 @@ public class SegmentHandler implements OnSegmentArriveListener {
             case FIN_WAIT_2:
                 Log.v(TAG, "onSegmentArrive(): adding data to processing queue");
                 tcb.queueDataForProcessing(segment.getData(), 0, segment.getDataLength());
-                // TODO: notify threads waiting for data
 
                 // update receive next sequence number to RCV.NXT + segment.getLen()
                 tcb.advanceReceiveNext(segment.getLen());
 
-                // TODO: send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                // send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                IP.Packet packet = IPUtil.getPacket(outSegment);
+                try {
+                    Log.v(TAG, "Sending: " + outSegment.toString());
+                    ip.ip_send(packet);
+                    tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+                } catch (IOException e) {
+                    Log.e(TAG, "Error while sending ACK", e);
+                    // TODO: howto handle this? For now just ignore
+                }
 
                 return;
             case CLOSE_WAIT:
@@ -343,7 +352,9 @@ public class SegmentHandler implements OnSegmentArriveListener {
         // advance receive next sequence number by the length of this segment
         tcb.advanceReceiveNext(segment.getLen());
 
-        // TODO: send ack for FIN
+        // TODO: if segment contains both FIN and text, two ACKs are sent
+
+        // send ack for FIN
         Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
         IP.Packet packet = IPUtil.getPacket(outSegment);
         try {
