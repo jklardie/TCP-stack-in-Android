@@ -47,4 +47,21 @@ public abstract class SegmentUtil {
 
         return segment;
     }
+
+    /**
+     * Construct an FIN packet
+     * @param tcb
+     * @return
+     */
+    public static Segment getFINPacket(TransmissionControlBlock tcb, int seq, int ack){
+        Segment segment = new Segment(
+                tcb.getLocalAddr(), tcb.getForeignAddr(),
+                tcb.getLocalport(), tcb.getForeignPort(),
+                seq, tcb.getSendWindow(), ack);
+
+        segment.setIsFin(true);
+        // isAck is automatically set because we passed an ack num to Segment
+
+        return segment;
+    }
 }
