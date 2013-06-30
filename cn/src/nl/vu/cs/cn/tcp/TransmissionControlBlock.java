@@ -51,8 +51,8 @@ public class TransmissionControlBlock {
     private boolean isServer;   // used for logging purposes
 
     private State state;
-    private final Lock lock = new ReentrantLock();
-    private final Condition stateChanged = lock.newCondition();
+    private final Lock stateLock = new ReentrantLock();
+    private final Condition stateChanged = stateLock.newCondition();
 
     private IP.IpAddress localAddr;
     private short localPort;
@@ -112,15 +112,15 @@ public class TransmissionControlBlock {
      * Enter a specific TCP state
      * @param state
      */
-    public void enterState(State state){
-        lock.lock();
+    public synchronized void enterState(State state){
+        stateLock.lock();
         try {
             Log.v(TAG, "Entering state: " + state);
             this.state = state;
 
             stateChanged.signalAll();
         } finally {
-            lock.unlock();
+            stateLock.unlock();
         }
     }
 
@@ -128,12 +128,12 @@ public class TransmissionControlBlock {
      * Get the current state the TCP is in.
      * @return
      */
-    public State getState(){
-        lock.lock();
+    public synchronized State getState(){
+        stateLock.lock();
         try {
             return state;
         } finally {
-            lock.unlock();
+            stateLock.unlock();
         }
     }
 
@@ -145,7 +145,7 @@ public class TransmissionControlBlock {
         ArrayList<State> acceptableStates =
                 new ArrayList<TransmissionControlBlock.State>(Arrays.asList(states));
 
-        lock.lock();
+        stateLock.lock();
         try {
             while(!acceptableStates.contains(state)){
                 try {
@@ -157,7 +157,7 @@ public class TransmissionControlBlock {
 
             // condition has been met, done waiting!
         } finally {
-            lock.unlock();
+            stateLock.unlock();
         }
     }
 
