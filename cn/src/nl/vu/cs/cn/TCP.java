@@ -112,12 +112,16 @@ public class TCP {
             case ESTABLISHED:
             case CLOSE_WAIT:
                 // Send data to receiver (segmentize where necessary)
-                int copiedData = 0;
-                int lastSeqNum;
+                int totalWrittenData = 0;
+                int lastSeqNum, writtenData;
+                int dataLeft = len;
                 do {
                     synchronized (tcb){
                         Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
-                        copiedData += outSegment.setData(buf, offset, len);
+                        writtenData = outSegment.setData(buf, offset+totalWrittenData, dataLeft);
+                        dataLeft -= writtenData;
+                        totalWrittenData += writtenData;
+
                         lastSeqNum = outSegment.getSeq() + outSegment.getLen() - 1;
                         IP.Packet packet = IPUtil.getPacket(outSegment);
                         try {
@@ -133,7 +137,7 @@ public class TCP {
                         tcb.advanceSendNext(outSegment.getLen());
                     }
 
-                } while (copiedData < len);
+                } while (dataLeft > 0);
 
                 sendIssued = true;
 
@@ -144,7 +148,7 @@ public class TCP {
                     Log.w(TAG, "Segment not acknowledged. Was waiting for " + lastSeqNum + ", but got " + tcb.getSendUnacknowledged());
                 }
 
-                return (acknowledged) ? copiedData : -1;
+                return (acknowledged) ? totalWrittenData : -1;
             default:
                 Log.e(TAG, "Error in send(): connection closing");
                 return -1;
