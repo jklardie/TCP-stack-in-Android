@@ -1,5 +1,7 @@
 package nl.vu.cs.cn.tcp.segment;
 
+import android.util.Log;
+
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public abstract class SegmentUtil {
@@ -94,5 +96,21 @@ public abstract class SegmentUtil {
         return (left <= right)
                 ? (left <= seq && seq < right)
                 : !(right <= seq && seq < left);
+    }
+
+    /**
+     * Wraparound-safe check to see if the windows bounded by [left1, right1) and [left2, right2)
+     * overlap each other in at least one point.
+     *
+     * @param left1
+     * @param right1
+     * @param left2
+     * @param right2
+     * @return
+     */
+    public static boolean overlap(long left1, long right1, long left2, long right2){
+        boolean overlap = inWindow(left1, left2, right1) || inWindow(left2, left1, right2);
+        Log.w("SegmentUtil", "["+left1+","+right1+") and ["+left2+","+right2+"). Overlaps?: " + overlap);
+        return overlap;
     }
 }

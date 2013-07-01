@@ -403,26 +403,21 @@ public class SegmentHandler implements OnSegmentArriveListener {
      * the current window size. A sequence number is valid if it falls inside the limits of
      * RCV.NXT and RCV.NXT + RCV.WND.
      *
-     * Note that in this implementation the window size is always equal to the max segment size.
-     *
      * @param segment
      * @return true if and only if the segment is acceptable
      */
     private boolean acceptableSegment(Segment segment){
-        long lower = tcb.getReceiveNext();
-        long upper = tcb.getReceiveNext() + tcb.getReceiveWindow();
-        long firstSeq = segment.getSeq();
-        long lastSeq = segment.getSeq() + segment.getLen() - 1;
+        if(tcb.getReceiveWindow() == 0){
+            // If the RCV.WND is zero, no segments will be acceptable, except valid ACKs, URGs and RSTs.
+            return segment.getLen() == 0 && segment.getSeq() == tcb.getReceiveNext();
+        } else {
+            long left = tcb.getReceiveNext();
+            long right = tcb.getReceiveNext() + tcb.getReceiveWindow();
+            return SegmentUtil.overlap(left, right, segment.getSeq(), segment.getLastSeq());
 
-        if(segment.getLen() == 0){
-            return SegmentUtil.isLess(firstSeq, upper) && SegmentUtil.isGreater(firstSeq, lower-1);
-        } else if(segment.getLen() > 0){
-            return SegmentUtil.isLess(firstSeq, upper) && SegmentUtil.isGreater(firstSeq, lower-1) ||
-                    SegmentUtil.isLess(lastSeq, upper) && SegmentUtil.isGreater(lastSeq, lower-1);
+            // TODO: handle custom implementation here (left == segment.getSeq()), since packets
+            // can not arrive out of order
         }
-
-        // Segment length < 0 not accepted
-        return false;
     }
 
 
