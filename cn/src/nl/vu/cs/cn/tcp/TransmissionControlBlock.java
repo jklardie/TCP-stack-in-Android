@@ -18,6 +18,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
 import nl.vu.cs.cn.tcp.segment.Segment;
+import nl.vu.cs.cn.tcp.segment.SegmentReceiver;
 import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 import nl.vu.cs.cn.tcp.timeout.TimeoutHandler;
 
@@ -82,15 +83,19 @@ public class TransmissionControlBlock {
 
     private final ScheduledExecutorService executor;
 
+    private SegmentReceiver segmentReceiver;
+
     private ConcurrentLinkedQueue<Byte> transmissionQueue;
     private ConcurrentLinkedQueue<Byte> processingQueue;
     private final Lock processingQueueLock = new ReentrantLock();
     private final Condition hasDataForProcessing = processingQueueLock.newCondition();
 
-
     private ConcurrentHashMap<RetransmissionSegment, ScheduledFuture> retransmissionMap;
     private final Lock retransmissionLock = new ReentrantLock();
     private final Condition retransmissionQueueChanged = retransmissionLock.newCondition();
+
+    private final Lock allAckedLock = new ReentrantLock();
+    private final Condition allSegmentsAcked = allAckedLock.newCondition();
 
     private TimeoutHandler timeoutHandler;
     private ScheduledFuture timeWaitScheduledFuture;
@@ -130,6 +135,11 @@ public class TransmissionControlBlock {
         try {
             Log.v(TAG, "Entering state: " + state);
             this.state = state;
+
+            // stop receiving packets when entering close
+            if(state == State.CLOSED && segmentReceiver != null){
+                segmentReceiver.stop();
+            }
 
             stateChanged.signalAll();
         } finally {
@@ -190,6 +200,7 @@ public class TransmissionControlBlock {
                 } catch (InterruptedException e) {
                     // ignore, wait again
                 }
+                Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acnowledged? : " + SegmentUtil.isAcked(segment, getSendUnacknowledged()));
             }
 
             // either the packet has been met, or the number of retransmits have been
@@ -200,6 +211,39 @@ public class TransmissionControlBlock {
             return isAcked;
         } finally {
             retransmissionLock.unlock();
+        }
+    }
+
+    /**
+     * Wait until the retransmission queue is empty
+     *
+     * @return
+     */
+    public void waitUntilAllAcknowledged(){
+        allAckedLock.lock();
+        try {
+            if(retransmissionMap.size() > 0){
+                for(RetransmissionSegment retrans : retransmissionMap.keySet()){
+                    Log.e(TAG, "Segment not acked: ("+retrans.getSegment().getSeq()+":"+retrans.getSegment().getLastSeq()+")");
+                }
+            }
+
+            while(retransmissionMap.size() > 0){
+                try {
+                    allSegmentsAcked.await();
+                } catch (InterruptedException e) {
+                    // ignore, wait again
+                }
+
+                if(retransmissionMap.size() > 0){
+                    for(RetransmissionSegment retrans : retransmissionMap.keySet()){
+                        Log.e(TAG, "Segment not acked: ("+retrans.getSegment().getSeq()+":"+retrans.getSegment().getLastSeq()+")");
+                    }
+                }
+
+            }
+        } finally {
+            allAckedLock.unlock();
         }
     }
 
@@ -268,7 +312,13 @@ public class TransmissionControlBlock {
         return foreignPort;
     }
 
-
+    /**
+     * Set the segmentReceiver, later used to stop receiving
+     * @param segmentReceiver
+     */
+    public void setSegmentReceiver(SegmentReceiver segmentReceiver){
+        this.segmentReceiver = segmentReceiver;
+    }
 
 
     ////////////////////////
@@ -482,6 +532,18 @@ public class TransmissionControlBlock {
     }
 
     /**
+     * Release all threads that are waiting for data to process
+     */
+    public void stopWaitingForDataToProcess(){
+        processingQueueLock.lock();
+        try {
+            hasDataForProcessing.signalAll();
+        } finally {
+            processingQueueLock.unlock();
+        }
+    }
+
+    /**
      * Write maxlen bytes of data into buf.
      * @param buf
      * @param offset
@@ -543,6 +605,13 @@ public class TransmissionControlBlock {
             } finally {
                 retransmissionLock.unlock();
             }
+
+            allAckedLock.lock();
+            try {
+                allSegmentsAcked.signalAll();
+            } finally {
+                allAckedLock.unlock();
+            }
         }
 
     }
@@ -558,10 +627,36 @@ public class TransmissionControlBlock {
         if(scheduledFuture != null){
             // Cancel scheduled task (the call to retransmit)
             scheduledFuture.cancel(true);
+
+            // notify waiting threads
+            allAckedLock.lock();
+            try {
+                allSegmentsAcked.signalAll();
+            } finally {
+                allAckedLock.unlock();
+            }
+
             return true;
         }
 
         return false;
+    }
+
+    public boolean hasDataToRetransmit(){
+        retransmissionLock.lock();
+        try {
+            return retransmissionMap.size() > 0;
+        } finally {
+            retransmissionLock.unlock();
+        }
+    }
+
+    public ArrayList<Segment> getUnacknowledgedSegments(){
+        ArrayList<Segment> segments = new ArrayList<Segment>();
+        for(RetransmissionSegment segment : retransmissionMap.keySet()){
+            segments.add(segment.getSegment());
+        }
+        return segments;
     }
 
     public void startTimeWaitTimer(){

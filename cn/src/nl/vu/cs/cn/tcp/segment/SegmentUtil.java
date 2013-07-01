@@ -81,8 +81,6 @@ public abstract class SegmentUtil {
                 ? (left <= seq && seq < right)
                 : !(right <= seq && seq < left);
 
-        Log.v("SegmentUtil", seq + " in window ["+left+","+right+")?: " + inWindow);
-
         return inWindow;
     }
 
@@ -98,7 +96,6 @@ public abstract class SegmentUtil {
      */
     public static boolean overlap(long left1, long right1, long left2, long right2){
         boolean overlap = inWindow(left1, left2, right1) || inWindow(left2, left1, right2);
-        Log.v("SegmentUtil", "["+left1+","+right1+") and ["+left2+","+right2+"). Overlaps?: " + overlap);
         return overlap;
     }
 

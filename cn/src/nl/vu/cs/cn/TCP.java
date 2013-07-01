@@ -27,8 +27,8 @@ public class TCP {
 
     private boolean sendIssued;
 
-    private SegmentReceiver segmentReceiver;
-    private SegmentHandler segmentHandler;
+    protected SegmentReceiver segmentReceiver;
+    protected SegmentHandler segmentHandler;
 
 
     /**
@@ -50,8 +50,6 @@ public class TCP {
         TAG += " [client]";
         tcb = new TransmissionControlBlock(ip, false);
 
-        initSegmentReceiver();
-
         return new Socket();
     }
 
@@ -63,8 +61,6 @@ public class TCP {
         TAG += " [server]";
         tcb = new TransmissionControlBlock(ip, true);
 
-        initSegmentReceiver();
-
         return new Socket(port);
     }
 
@@ -75,6 +71,10 @@ public class TCP {
         segmentHandler = new SegmentHandler(tcb, ip);
         segmentReceiver = new SegmentReceiver(segmentHandler, ip);
         segmentReceiver.run();
+
+        // set segmentReceiver in transmission control block so it can be stopped
+        // when the state changes to CLOSED
+        tcb.setSegmentReceiver(segmentReceiver);
     }
 
     /**
@@ -104,7 +104,7 @@ public class TCP {
 //                }
 //                Log.v(TAG, "send(): data queued for transmission after entering ESTABLISHED. Waiting for ACK");
 //
-//                // TODO: should we already return, or wait for ACK?
+//                // should we already return, or wait for ACK?
 //                return bytesQueued;
 
                 Log.e(TAG, "Error in send(): connection not ESTABLISHED");
@@ -172,9 +172,8 @@ public class TCP {
             case SYN_RECEIVED:
                 // TODO: unsupported for now.
 //                Log.v(TAG, "receive(): call queued until state is ESTABLISHED");
-//                // TODO: Queue receive for processing after entering ESTABLISHED state
+//                // Queue receive for processing after entering ESTABLISHED state
 //                // e.g. block until state == established, and process receive
-//                // TODO: don't forget return here.
 
                 Log.e(TAG, "Error in receive(): connection not ESTABLISHED");
                 return -1;
@@ -265,6 +264,8 @@ public class TCP {
 
             tcb.setForeignSocketInfo(dst, (short)port);
 
+            initSegmentReceiver();
+
             // sending SYN until entering SYN SENT state should be synchronized
             synchronized(tcb) {
                 // send SYN packet <SEQ=ISS><CTL=SYN>
@@ -300,6 +301,8 @@ public class TCP {
          * This call blocks until a connection is made.
          */
         public void accept() {
+            initSegmentReceiver();
+
             tcb.enterState(TransmissionControlBlock.State.LISTEN);
 
             Log.v(TAG, "accept(): waiting until state becomes ESTABLISHED");
@@ -344,25 +347,55 @@ public class TCP {
                     Log.e(TAG, "Error in close(): connection does not exist");
                     return false;
                 case LISTEN:
-                    // TODO: Any outstanding RECEIVEs are returned with "error:  closing" responses
                     tcb.enterState(TransmissionControlBlock.State.CLOSED);
+
+                    // Any outstanding RECEIVEs are stopped
+                    tcb.stopWaitingForDataToProcess();
                     return true;
                 case SYN_SENT:
                     // TODO: return "error:  closing" responses to any queued SENDs, or RECEIVEs
                     tcb.enterState(TransmissionControlBlock.State.CLOSED);
                     return true;
                 case SYN_RECEIVED:
-                    // TODO: this probably needs concurrency protection
                     if(!sendIssued && !tcb.hasDataToTransmit()){
-                        // TODO: send FIN
-                        tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
+                        synchronized (tcb){
+                            Segment segment = SegmentUtil.getFINPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                            IP.Packet packet = IPUtil.getPacket(segment);
+                            try {
+                                Log.v(TAG, "Sending: " + segment.toString());
+                                ip.ip_send(packet);
+                            } catch (IOException e) {
+                                Log.e(TAG, "Error while sending FIN", e);
+                                return false;
+                            }
+
+                            tcb.setSendUnacknowledged(segment.getSeq());
+                            tcb.advanceSendNext(segment.getLen());
+
+                            tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
+                            tcb.setUnacknowledgedFin(segment);
+                        }
+                        return true;
+                    } else {
+                        // Queue close for processing after entering ESTABLISHED state
+                        Log.v(TAG, "Queueing close for processing after entering ESTABLISHED state");
+                        tcb.waitForStates(TransmissionControlBlock.State.ESTABLISHED);
+
+                        return close();
                     }
 
-                    // TODO: Queue close for processing after entering ESTABLISHED state
-                    // e.g. block until state == established, and process close
-                    return true;
                 case ESTABLISHED:
-                    // TODO: Queue this close until all preceding SENDs have finished
+                    tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
+
+                    // Queue this close until all preceding SENDs have finished
+                    // In this implementation we always send data immediately, so no
+                    // data is added to the transmitQueue (i.e. tcb.hasDataToTransmit() will
+                    // always return false).
+                    if(tcb.hasDataToTransmit() || tcb.hasDataToRetransmit()){
+                        Log.v(TAG, "Waiting until all packets have been sent");
+                        tcb.waitUntilAllAcknowledged();
+                        Log.v(TAG, "All packets are either acknowledged or timed out");
+                    }
 
                     // sending FIN until entering FIN_WAIT_1 state should be synchronized
                     synchronized (tcb){
@@ -379,7 +412,6 @@ public class TCP {
                         tcb.setSendUnacknowledged(segment.getSeq());
                         tcb.advanceSendNext(segment.getLen());
 
-                        tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
                         tcb.setUnacknowledgedFin(segment);
                     }
 

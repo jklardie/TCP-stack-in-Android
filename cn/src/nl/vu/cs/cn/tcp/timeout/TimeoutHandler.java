@@ -26,6 +26,8 @@ public class TimeoutHandler implements OnTimeoutListener {
 
     public void onUserTimeout(){
         /*
+         *  Unimplemented for now.
+         *
          * TODO:
          * - flush all queus
          * - signal user: "error:  connection aborted due to user timeout" in general
@@ -67,7 +69,7 @@ public class TimeoutHandler implements OnTimeoutListener {
                     tcb.enterState(TransmissionControlBlock.State.LISTEN);
                     break;
 
-                // TODO: Expend this list
+                // TODO: Expend this list with other states
             }
         } else {
             Log.v(getTag(), "Segment " + segment.getSeq() + " was not ACKed. Retry #" + (retryNum+1));

@@ -99,12 +99,4 @@ public class Util {
         return bb;
     }
 
-    /**
-     * Generate initial sequence number
-     * @return initial sequence number
-     */
-    public static int getInitialSeqNum() {
-        // TODO: implement
-        return 0;
-    }
 }

@@ -12,8 +12,8 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
     private String TAG = "SegmentHandler";
 
-    private final TransmissionControlBlock tcb;
-    private final IP ip;
+    private volatile TransmissionControlBlock tcb;
+    private volatile IP ip;
 
     public SegmentHandler(TransmissionControlBlock tcb, IP ip){
         this.tcb = tcb;
@@ -257,7 +257,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
                 if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_1) {
                     // Check if our FIN has been ACKed
-                    if(SegmentUtil.isAcked(tcb.getUnacknowledgedFin(), segment.getAck())){
+                    if(tcb.getUnacknowledgedFin() != null && SegmentUtil.isAcked(tcb.getUnacknowledgedFin(), segment.getAck())){
                         tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_2);
                     }
                 } else if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_2) {
