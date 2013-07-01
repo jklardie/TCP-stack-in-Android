@@ -137,7 +137,7 @@ public class TCPManager {
 
         @Override
         protected Boolean doInBackground(String... filePath) {
-            // "image protocol: start with message <image>, send image data, send </image>"
+            // image protocol: start with message <image>, send image size, send image data
             byte[] open = "<image>".getBytes();
             if(socket.write(open, 0, open.length) != open.length){
                 // todo handle errors

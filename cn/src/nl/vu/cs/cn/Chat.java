@@ -38,8 +38,6 @@ public class Chat extends Activity implements View.OnClickListener, TCPListener 
     private Button sendBtn1, sendBtn2, sendImageBtn1, sendImageBtn2;
     private ScrollView scrollView1, scrollView2;
 
-    private boolean isOdd;
-
     @Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -176,43 +174,58 @@ public class Chat extends Activity implements View.OnClickListener, TCPListener 
     }
 
     @Override
-    public void onMessage(boolean isServer, String msg) {
+    public synchronized void onMessage(boolean isServer, String msg) {
         Log.d(TAG, "Received message: " + msg);
-
-        isOdd = !isOdd;
 
         TextView textView = new TextView(this);
         textView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        textView.setBackgroundColor(getResources().getColor(isOdd ? android.R.color.transparent : R.color.light_blue));
         textView.setText(msg);
 
         if(isServer){
+            textView.setBackgroundColor(getResources().getColor(
+                    messageView1.getChildCount() % 2 == 0
+                            ? android.R.color.transparent
+                            : R.color.light_blue));
+
             messageView1.addView(textView);
             scrollView1.fullScroll(ScrollView.FOCUS_DOWN);
         } else {
+            textView.setBackgroundColor(getResources().getColor(
+                    messageView2.getChildCount() % 2 == 0
+                            ? android.R.color.transparent
+                            : R.color.light_blue));
+
             messageView2.addView(textView);
             scrollView2.fullScroll(ScrollView.FOCUS_DOWN);
         }
+
     }
 
     @Override
-    public void onImage(boolean isServer, Bitmap bitmap) {
+    public synchronized void onImage(boolean isServer, Bitmap bitmap) {
         Log.d(TAG, "Received image!");
-
-        isOdd = !isOdd;
 
         ImageView imageView = new ImageView(this);
         imageView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         imageView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        imageView.setBackgroundColor(getResources().getColor(isOdd ? android.R.color.transparent : R.color.light_blue));
         imageView.setImageBitmap(bitmap);
 
         if(isServer){
+            imageView.setBackgroundColor(getResources().getColor(
+                    messageView1.getChildCount() % 2 == 0
+                            ? android.R.color.transparent
+                            : R.color.light_blue));
+
             messageView1.addView(imageView);
             scrollView1.fullScroll(ScrollView.FOCUS_DOWN);
         } else {
+            imageView.setBackgroundColor(getResources().getColor(
+                    messageView2.getChildCount() % 2 == 0
+                            ? android.R.color.transparent
+                            : R.color.light_blue));
+
             messageView2.addView(imageView);
             scrollView2.fullScroll(ScrollView.FOCUS_DOWN);
         }
