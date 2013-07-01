@@ -68,22 +68,6 @@ public abstract class SegmentUtil {
     }
 
     /**
-     * Return true if and only if x is less (wraparound-safe) than y
-     */
-    public static boolean isLess(long x, long y){
-        return (x < y && y - x < Integer.MAX_VALUE) ||
-                (x > y && x - y > Integer.MAX_VALUE);
-    }
-
-    /**
-     * Return true if and only if x is greater (wraparound-safe) than y
-     */
-    public static boolean isGreater(long x, long y){
-        return (x < y && y - x > Integer.MAX_VALUE) ||
-                (x > y && x - y < Integer.MAX_VALUE);
-    }
-
-    /**
      * Wraparound-safe check if seq is inside the window [left, right).
      * If left <= right, then it is assumed that the sequence numbers have wrapped around.
      *
@@ -97,7 +81,7 @@ public abstract class SegmentUtil {
                 ? (left <= seq && seq < right)
                 : !(right <= seq && seq < left);
 
-        Log.w("SegmentUtil", seq + " in window ["+left+","+right+")?: " + inWindow);
+        Log.v("SegmentUtil", seq + " in window ["+left+","+right+")?: " + inWindow);
 
         return inWindow;
     }
@@ -114,7 +98,34 @@ public abstract class SegmentUtil {
      */
     public static boolean overlap(long left1, long right1, long left2, long right2){
         boolean overlap = inWindow(left1, left2, right1) || inWindow(left2, left1, right2);
-        Log.w("SegmentUtil", "["+left1+","+right1+") and ["+left2+","+right2+"). Overlaps?: " + overlap);
+        Log.v("SegmentUtil", "["+left1+","+right1+") and ["+left2+","+right2+"). Overlaps?: " + overlap);
         return overlap;
     }
+
+    /**
+     * Check if the segment is fully ACKed by the given ack
+     * @param segment
+     * @param ack
+     * @return
+     */
+    public static boolean isAcked(Segment segment, long ack){
+        return SegmentUtil.inWindow(segment.getSeq(), segment.getLastSeq(), ack);
+    }
+
+    /**
+     * Check if the sequence number has been ACKed by the given ack,
+     * given the segment lenght was segmentLen.
+     *
+     * Note: only use this if it is certain what the segment length was.
+     *
+     * @param seq
+     * @param ack
+     * @param segmentLen
+     * @return
+     */
+    public static boolean isAcked(long seq, long ack, int segmentLen){
+        long lastSeq = (segmentLen > 0) ? (seq + segmentLen - 1) % Integer.MAX_VALUE : seq;
+        return SegmentUtil.inWindow(seq, lastSeq, ack);
+    }
+
 }
