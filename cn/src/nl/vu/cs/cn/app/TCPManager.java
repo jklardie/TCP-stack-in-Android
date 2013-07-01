@@ -193,10 +193,13 @@ public class TCPManager {
 
                     // we are getting an image, so completely receive it
                     byte[] imgBuf = new byte[imageSize];
-                    int imgBufLen = socket.read(imgBuf, 0, imgBuf.length);
+                    int receivedData = 0;
+                    while((receivedData += socket.read(imgBuf, receivedData, imageSize-receivedData)) < imageSize){
+                        // read until we have the complete image
+                    }
 
                     Bitmap bitmap;
-                    bitmap = BitmapFactory.decodeByteArray(imgBuf, 0, imgBufLen);
+                    bitmap = BitmapFactory.decodeByteArray(imgBuf, 0, imageSize);
 
                     publishProgress(bitmap);
                 } else {
