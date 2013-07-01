@@ -80,4 +80,19 @@ public abstract class SegmentUtil {
         return (x < y && y - x > Integer.MAX_VALUE) ||
                 (x > y && x - y < Integer.MAX_VALUE);
     }
+
+    /**
+     * Wraparound-safe check if seq is inside the window [left, right).
+     * If left <= right, then it is assumed that the sequence numbers have wrapped around.
+     *
+     * @param left
+     * @param seq
+     * @param right
+     * @return true if and only if seq is contained in the semi-open segment between [left, right).
+     */
+    public static boolean inWindow(long left, long seq, long right){
+        return (left <= right)
+                ? (left <= seq && seq < right)
+                : !(right <= seq && seq < left);
+    }
 }

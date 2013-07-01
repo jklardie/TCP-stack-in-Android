@@ -2,34 +2,38 @@ package nl.vu.cs.cn;
 
 import junit.framework.TestCase;
 
+import nl.vu.cs.cn.tcp.segment.SegmentUtil;
+
 public class TestComparison extends TestCase {
 
-    /**
-     * Return true if and only if x is less (wraparound-safe) than y
-     */
-    private boolean isLess(long x, long y){
-        return (x < y && y - x < Integer.MAX_VALUE) ||
-                (x > y && x - y > Integer.MAX_VALUE);
+    public void testComparisonLow() throws Exception {
+        assertTrue(SegmentUtil.inWindow(0, 0, 1));
+        assertTrue(SegmentUtil.inWindow(0, 1, 2));
+        assertTrue(SegmentUtil.inWindow(0, 5, 10));
+        assertFalse(SegmentUtil.inWindow(0, 0, 0));
+        assertFalse(SegmentUtil.inWindow(0, 1, 0));
+        assertFalse(SegmentUtil.inWindow(0, 1, 1));
+        assertTrue(SegmentUtil.inWindow(10, 10, 11111));
+        assertTrue(SegmentUtil.inWindow(10, 111151, 21222121));
     }
 
-    /**
-     * Return true if and only if x is greater (wraparound-safe) than y
-     */
-    private boolean isGreater(long x, long y){
-        return (x < y && y - x > Integer.MAX_VALUE) ||
-                (x > y && x - y < Integer.MAX_VALUE);
+    public void testComparisonHigh() throws Exception {
+        int max = Integer.MAX_VALUE;
+        assertTrue(SegmentUtil.inWindow(max-100, max-100, max));
+        assertTrue(SegmentUtil.inWindow(max-100, max-99, max));
+        assertFalse(SegmentUtil.inWindow(max-100, max, max));
+        assertFalse(SegmentUtil.inWindow(max-100, max-200, max));
     }
 
+    public void testComparisonOverlap() throws Exception {
+        int max = Integer.MAX_VALUE;
 
-    public void testComparison() throws Exception {
-        assertEquals(true, isLess(1, 2));
-        assertEquals(true, isLess(1, Integer.MAX_VALUE-1));
-        assertEquals(true, isLess(125, Integer.MAX_VALUE-5));
-        assertEquals(false, isLess(1,1));
-
-        assertEquals(true, isGreater(2, 1));
-        assertEquals(true, isGreater(Integer.MAX_VALUE - 1, 1));
-        assertEquals(true, isGreater(Integer.MAX_VALUE - 5, 123544));
-        assertEquals(false, isGreater(1,1));
+        // seq num has wrapped, so left is max, right is 10
+        assertTrue(SegmentUtil.inWindow(max, 6, 10));
+        assertTrue(SegmentUtil.inWindow(max, max, 10));
+        assertTrue(SegmentUtil.inWindow(max, 9, 10));
+        assertFalse(SegmentUtil.inWindow(max, 10, 10));
+        assertFalse(SegmentUtil.inWindow(max, 11, 10));
+        assertFalse(SegmentUtil.inWindow(max, max-1, 10));
     }
 }
