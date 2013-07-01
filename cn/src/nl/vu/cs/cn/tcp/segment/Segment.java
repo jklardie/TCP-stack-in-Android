@@ -182,7 +182,7 @@ public class Segment {
     }
 
     public long getLastSeq() {
-        return (seq + len - 1) % Integer.MAX_VALUE;
+        return (getLen() == 0) ? seq : ((seq + getLen() - 1) % Integer.MAX_VALUE);
     }
 
     public long getAck() {
