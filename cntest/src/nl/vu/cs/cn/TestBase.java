@@ -1,8 +1,11 @@
 package nl.vu.cs.cn;
 
+import android.util.Log;
+
 import junit.framework.TestCase;
 
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
+import nl.vu.cs.cn.tcp.segment.SegmentReceiver;
 
 
 public class TestBase extends TestCase {
@@ -32,6 +35,15 @@ public class TestBase extends TestCase {
     @Override
     protected void tearDown() throws Exception {
         clearRetransmissionQueues();
+
+        try {
+            client.segmentReceiver.stop();
+            Log.i(TAG, "Stopped client segment receiver");
+        } catch (NullPointerException e){}
+        try {
+            server.segmentReceiver.stop();
+            Log.i(TAG, "Stopped server segment receiver");
+        } catch (NullPointerException e){}
 
         super.tearDown();
     }
