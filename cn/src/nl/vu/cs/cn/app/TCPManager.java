@@ -140,12 +140,13 @@ public class TCPManager {
             // image protocol: start with message <image>, send image size, send image data
             byte[] open = "<image>".getBytes();
             if(socket.write(open, 0, open.length) != open.length){
-                // todo handle errors
                 return false;
             }
 
             Bitmap bitmap = decodeFile(filePath[0]);
-            // TODO: bitmap could be null
+            if(bitmap == null){
+                return false;
+            }
 
             // compress image
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -157,7 +158,6 @@ public class TCPManager {
 
             // send image
             if(socket.write(buf, 0, buf.length) != buf.length){
-                // todo handle errors
                 return false;
             }
 
