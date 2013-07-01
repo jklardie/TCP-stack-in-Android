@@ -17,6 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
+import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 import nl.vu.cs.cn.tcp.timeout.TimeoutHandler;
 
 /**
@@ -63,20 +64,20 @@ public class TransmissionControlBlock {
     private short foreignPort;
 
     // sequence variables
-    private int iss;      // initial send sequence number
-    private int irs;            // initial receive sequence number
+    private long iss;            // initial send sequence number
+    private long irs;            // initial receive sequence number
 
     // send sequence variables (note that window and urgent pointer info is not used)
-    private int snd_una;        // send - unacknowledged sequence number
-    private int snd_nxt;        // send - next sequence number
-    private short snd_wnd;        // send - window (offset of snd_una)
+    private long snd_una;        // send - unacknowledged sequence number
+    private long snd_nxt;        // send - next sequence number
+    private short snd_wnd;      // send - window (offset of snd_una)
 
-    private int fin_una;        // unacknowledged FIN sequence number
+    private long fin_una;        // unacknowledged FIN sequence number
 
 
     // receive sequence variables
-    private int rcv_nxt;        // receive - next sequence number
-    private short rcv_wnd;        // receive - window
+    private long rcv_nxt;        // receive - next sequence number
+    private short rcv_wnd;      // receive - window
 
     private final ScheduledExecutorService executor;
 
@@ -183,11 +184,13 @@ public class TransmissionControlBlock {
      * @param seqNum
      * @return true if and only if the packet has been ACKed within the number of retries
      */
-    public boolean waitForAck(int seqNum){
+    public boolean waitForAck(long seqNum){
+        seqNum %= Integer.MAX_VALUE;
+
         retransmissionLock.lock();
         try {
             int i;
-            for(i=0; i<MAX_RETRANSMITS+1 && getSendUnacknowledged() <= seqNum; i++){
+            for(i=0; i<MAX_RETRANSMITS+1 && !SegmentUtil.isLess(seqNum, getSendUnacknowledged()); i++){
                 try {
                     retransmissionQueueChanged.await();
                 } catch (InterruptedException e) {
@@ -197,9 +200,9 @@ public class TransmissionControlBlock {
 
             // either the packet has been met, or the number of retransmits have been
             // reached, and the packet did not arrive
-            Log.v(TAG, "Packet " + seqNum + " acnowledged? : " + (seqNum < getSendUnacknowledged()));
+            Log.v(TAG, "Packet " + seqNum + " acnowledged? : " + SegmentUtil.isLess(seqNum, getSendUnacknowledged()));
 
-            return seqNum < getSendUnacknowledged();
+            return SegmentUtil.isLess(seqNum, getSendUnacknowledged());
         } finally {
             retransmissionLock.unlock();
         }
@@ -281,10 +284,11 @@ public class TransmissionControlBlock {
      * Returns the initial sequence number, and creates it if this is the first call.
      * @return
      */
-    public int getInitialSendSequenceNumber() {
+    public long getInitialSendSequenceNumber() {
         if(iss == 0){
             // TODO: implement correct create method
-            iss = new Random().nextInt(Integer.MAX_VALUE / 10);
+//            iss = new Random().nextInt(Integer.MAX_VALUE / 4);
+            iss = 0;
         }
 
         return iss;
@@ -294,7 +298,7 @@ public class TransmissionControlBlock {
      * Set the initial receive sequencen number.
      * @param irs
      */
-    public void setInitialReceiveSequenceNumber(int irs){
+    public void setInitialReceiveSequenceNumber(long irs){
         this.irs = irs;
     }
 
@@ -302,15 +306,15 @@ public class TransmissionControlBlock {
      * Set send unacknowledged sequence number.
      * @param snd_una
      */
-    public synchronized void setSendUnacknowledged(int snd_una){
-        this.snd_una = snd_una;
+    public synchronized void setSendUnacknowledged(long snd_una){
+        this.snd_una = snd_una % Integer.MAX_VALUE;
     }
 
     /**
      * Get send unacknowledged sequence number.
      * @return
      */
-    public synchronized int getSendUnacknowledged(){
+    public synchronized long getSendUnacknowledged(){
         return snd_una;
     }
 
@@ -318,23 +322,23 @@ public class TransmissionControlBlock {
      * Advance send next sequence number by len.
      * @param len
      */
-    public void advanceSendNext(int len){
-        this.snd_nxt += len;
+    public void advanceSendNext(long len){
+        this.snd_nxt = (snd_nxt + len) % Integer.MAX_VALUE;
     }
 
     /**
      * Set send next sequence number.
      * @return
      */
-    public void setSendNext(int snd_nxt){
-        this.snd_nxt = snd_nxt;
+    public void setSendNext(long snd_nxt){
+        this.snd_nxt = snd_nxt % Integer.MAX_VALUE;
     }
 
     /**
      * Get send next sequence number.
      * @return
      */
-    public int getSendNext(){
+    public long getSendNext(){
         return snd_nxt;
     }
 
@@ -356,22 +360,22 @@ public class TransmissionControlBlock {
      * @param len
      */
     public void advanceReceiveNext(int len){
-        this.rcv_nxt += len;
+        this.rcv_nxt = (rcv_nxt + len) % Integer.MAX_VALUE;
     }
 
     /**
      * Set receive next sequence number to rcv_nxt
      * @param rcv_nxt
      */
-    public void setReceiveNext(int rcv_nxt){
-        this.rcv_nxt = rcv_nxt;
+    public void setReceiveNext(long rcv_nxt){
+        this.rcv_nxt = rcv_nxt % Integer.MAX_VALUE;
     }
 
     /**
      * Get receive next sequence number.
      * @return
      */
-    public int getReceiveNext(){
+    public long getReceiveNext(){
         return rcv_nxt;
     }
 
@@ -387,15 +391,15 @@ public class TransmissionControlBlock {
      * Set unacknowledged FIN sequence number
      * @param fin_una
      */
-    public void setUnacknowledgedFin(int fin_una){
-        this.fin_una = fin_una;
+    public void setUnacknowledgedFin(long fin_una){
+        this.fin_una = fin_una % Integer.MAX_VALUE;
     }
 
     /**
      * Get the unacknowledged FIN sequence number
      * @return
      */
-    public int getUnacknowledgedFin(){
+    public long getUnacknowledgedFin(){
         return fin_una;
     }
 
@@ -529,10 +533,10 @@ public class TransmissionControlBlock {
      * smaller than the ack number
      * @param ack
      */
-    public void removeFromRetransmissionQueue(int ack){
+    public void removeFromRetransmissionQueue(long ack){
         int numRemoves = 0;
         for(RetransmissionSegment segment : retransmissionMap.keySet()){
-            if((segment.getSegment().getSeq() + segment.getSegment().getLen() - 1) < ack){
+            if(SegmentUtil.isLess(segment.getSegment().getSeq() + segment.getSegment().getLen() - 1, ack)){
                 retransmissionMap.remove(segment).cancel(true);
                 Log.v(TAG, "Removed segment " + segment.getSegment().getSeq() + " from retransmission queue");
                 numRemoves++;

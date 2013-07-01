@@ -113,7 +113,8 @@ public class TCP {
             case CLOSE_WAIT:
                 // Send data to receiver (segmentize where necessary)
                 int totalWrittenData = 0;
-                int lastSeqNum, writtenData;
+                long lastSeqNum;
+                int writtenData;
                 int dataLeft = len;
                 do {
                     synchronized (tcb){
@@ -122,7 +123,7 @@ public class TCP {
                         dataLeft -= writtenData;
                         totalWrittenData += writtenData;
 
-                        lastSeqNum = outSegment.getSeq() + outSegment.getLen() - 1;
+                        lastSeqNum = (outSegment.getSeq() + outSegment.getLen() - 1) % Integer.MAX_VALUE;
                         IP.Packet packet = IPUtil.getPacket(outSegment);
                         try {
                             Log.v(TAG, "Sending: " + outSegment.toString());
@@ -268,7 +269,7 @@ public class TCP {
             // sending SYN until entering SYN SENT state should be synchronized
             synchronized(tcb) {
                 // send SYN packet <SEQ=ISS><CTL=SYN>
-                int iss = tcb.getInitialSendSequenceNumber();
+                long iss = tcb.getInitialSendSequenceNumber();
                 Segment segment = SegmentUtil.getSYNPacket(tcb, iss);
                 IP.Packet packet = IPUtil.getPacket(segment);
                 try {

@@ -49,8 +49,8 @@ public class Segment {
     private short sourcePort;
     private short destinationPort;
 
-    private int seq;    // segment sequence number
-    private int ack;    // segment acknowledgement number
+    private long seq;    // segment sequence number
+    private long ack;    // segment acknowledgement number
     private short wnd;  // segment window
 
     private int len = -1;    // segment length data + syn + fin
@@ -72,7 +72,7 @@ public class Segment {
      * @param destinationPort
      * @param seq
      */
-    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq, short wnd) {
+    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, long seq, short wnd) {
         this(sourceAddr, destinationAddr, sourcePort, destinationPort, seq, wnd, -1);
     }
 
@@ -85,16 +85,16 @@ public class Segment {
      * @param seq
      * @param ack
      */
-    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, int seq, short wnd, int ack) {
+    protected Segment(IP.IpAddress sourceAddr, IP.IpAddress destinationAddr, short sourcePort, short destinationPort, long seq, short wnd, long ack) {
         this.sourceAddr = sourceAddr;
         this.destinationAddr = destinationAddr;
         this.sourcePort = sourcePort;
         this.destinationPort = destinationPort;
-        this.seq = seq;
+        this.seq = seq % Integer.MAX_VALUE;
         this.wnd = wnd;
 
         if(ack > -1){
-            this.ack = ack;
+            this.ack = ack % Integer.MAX_VALUE;
             isAck = true;
         }
 
@@ -177,11 +177,15 @@ public class Segment {
         return destinationPort;
     }
 
-    public int getSeq() {
+    public long getSeq() {
         return seq;
     }
 
-    public int getAck() {
+    public long getLastSeq() {
+        return (seq + len - 1) % Integer.MAX_VALUE;
+    }
+
+    public long getAck() {
         return ack;
     }
 
@@ -293,8 +297,8 @@ public class Segment {
         ByteBuffer bb = ByteBuffer.allocate(capacity);
         bb.putShort(sourcePort);
         bb.putShort(destinationPort);
-        bb.putInt(seq);
-        bb.putInt(ack);
+        bb.putInt((int)seq);
+        bb.putInt((int)ack);
 
         /*
          * Create bits for data offset, reserved area, and control bits.

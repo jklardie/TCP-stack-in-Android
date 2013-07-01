@@ -10,6 +10,7 @@ import nl.vu.cs.cn.IPUtil;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
 import nl.vu.cs.cn.tcp.segment.Segment;
+import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 
 public class TimeoutHandler implements OnTimeoutListener {
 
@@ -45,7 +46,7 @@ public class TimeoutHandler implements OnTimeoutListener {
             }
 
             // double check if segment is not acknowledged by now
-            if(segment.getSeq()+segment.getLen() < tcb.getSendUnacknowledged()){
+            if(SegmentUtil.isLess(segment.getSeq() + segment.getLen(), tcb.getSendUnacknowledged())){
                 // the sequence number has been completely acknowledged by now
                 return;
             }

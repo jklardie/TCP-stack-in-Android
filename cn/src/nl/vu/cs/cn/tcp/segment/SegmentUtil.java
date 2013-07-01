@@ -9,7 +9,7 @@ public abstract class SegmentUtil {
      * @param tcb
      * @return
      */
-    public static Segment getSYNPacket(TransmissionControlBlock tcb, int seq){
+    public static Segment getSYNPacket(TransmissionControlBlock tcb, long seq){
         Segment segment = new Segment(
                 tcb.getLocalAddr(), tcb.getForeignAddr(),
                 tcb.getLocalport(), tcb.getForeignPort(),
@@ -24,7 +24,7 @@ public abstract class SegmentUtil {
      * @param tcb
      * @return
      */
-    public static Segment getSYNACKPacket(TransmissionControlBlock tcb, int seq, int ack){
+    public static Segment getSYNACKPacket(TransmissionControlBlock tcb, long seq, long ack){
         Segment segment = getPacket(tcb, seq, ack);
         segment.setIsSyn(true);
         // isAck is automatically set inside getPacket()
@@ -37,7 +37,7 @@ public abstract class SegmentUtil {
      * @param tcb
      * @return
      */
-    public static Segment getPacket(TransmissionControlBlock tcb, int seq, int ack){
+    public static Segment getPacket(TransmissionControlBlock tcb, long seq, long ack){
         Segment segment = new Segment(
                 tcb.getLocalAddr(), tcb.getForeignAddr(),
                 tcb.getLocalport(), tcb.getForeignPort(),
@@ -53,7 +53,7 @@ public abstract class SegmentUtil {
      * @param tcb
      * @return
      */
-    public static Segment getFINPacket(TransmissionControlBlock tcb, int seq, int ack){
+    public static Segment getFINPacket(TransmissionControlBlock tcb, long seq, long ack){
         Segment segment = new Segment(
                 tcb.getLocalAddr(), tcb.getForeignAddr(),
                 tcb.getLocalport(), tcb.getForeignPort(),
@@ -63,5 +63,21 @@ public abstract class SegmentUtil {
         // isAck is automatically set because we passed an ack num to Segment
 
         return segment;
+    }
+
+    /**
+     * Return true if and only if x is less (wraparound-safe) than y
+     */
+    public static boolean isLess(long x, long y){
+        return (x < y && y - x < Integer.MAX_VALUE) ||
+                (x > y && x - y > Integer.MAX_VALUE);
+    }
+
+    /**
+     * Return true if and only if x is greater (wraparound-safe) than y
+     */
+    public static boolean isGreater(long x, long y){
+        return (x < y && y - x > Integer.MAX_VALUE) ||
+                (x > y && x - y < Integer.MAX_VALUE);
     }
 }
