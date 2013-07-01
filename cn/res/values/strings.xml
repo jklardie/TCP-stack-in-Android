@@ -2,5 +2,14 @@
 <resources>
 
     <string name="app_name">CNPracticum Chat</string>
+    <string name="message_input_hint">Message...</string>
+    <string name="failed_connecting_msg">Failed connecting</string>
+    <string name="failed_initializing_msg">IOException while initializing TCP</string>
+    <string name="connecting_dialog_title">Connecting</string>
+    <string name="connecting_dialog_msg">Creating TCP connection</string>
+    <string name="failed_sending_msg">Failed sending message</string>
+    <string name="send">Send</string>
+    <string name="btn_image">Image</string>
+    <string name="btn_send">Send</string>
 
 </resources>
