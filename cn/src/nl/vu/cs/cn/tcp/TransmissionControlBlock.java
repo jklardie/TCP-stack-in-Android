@@ -527,14 +527,13 @@ public class TransmissionControlBlock {
     }
 
     /**
-     * Remove all segments from the retransmission queue which have a sequence number
-     * smaller than the ack number
+     * Remove all segments from the retransmission queue which have been ACKed by ack
      * @param ack
      */
     public void removeFromRetransmissionQueue(long ack){
         int numRemoves = 0;
         for(RetransmissionSegment segment : retransmissionMap.keySet()){
-            if(SegmentUtil.isLess(segment.getSegment().getSeq() + segment.getSegment().getLen() - 1, ack)){
+            if(SegmentUtil.inWindow(segment.getSegment().getSeq(), segment.getSegment().getLastSeq(), ack)){
                 retransmissionMap.remove(segment).cancel(true);
                 Log.v(TAG, "Removed segment " + segment.getSegment().getSeq() + " from retransmission queue");
                 numRemoves++;

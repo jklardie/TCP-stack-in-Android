@@ -93,9 +93,13 @@ public abstract class SegmentUtil {
      * @return true if and only if seq is contained in the semi-open segment between [left, right).
      */
     public static boolean inWindow(long left, long seq, long right){
-        return (left <= right)
+        boolean inWindow = (left <= right)
                 ? (left <= seq && seq < right)
                 : !(right <= seq && seq < left);
+
+        Log.w("SegmentUtil", seq + " in window ["+left+","+right+")?: " + inWindow);
+
+        return inWindow;
     }
 
     /**
