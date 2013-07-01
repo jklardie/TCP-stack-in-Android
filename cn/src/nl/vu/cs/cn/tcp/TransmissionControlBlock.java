@@ -286,9 +286,7 @@ public class TransmissionControlBlock {
      */
     public long getInitialSendSequenceNumber() {
         if(iss == 0){
-            // TODO: implement correct create method
-//            iss = new Random().nextInt(Integer.MAX_VALUE / 4);
-            iss = 0;
+            iss = System.nanoTime() % Integer.MAX_VALUE;
         }
 
         return iss;
