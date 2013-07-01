@@ -153,13 +153,13 @@ public class SegmentHandler implements OnSegmentArriveListener {
     private void handleSegmentArriveInSynSentState(Segment segment){
         // first, check if this is an ACK packet
         if(segment.isAck()){
-            if(SegmentUtil.isLess(segment.getAck(), tcb.getInitialSendSequenceNumber()+1) ||
-                    SegmentUtil.isGreater(segment.getAck(), tcb.getSendNext())){
-                // ACK outisde window. Normally a RESET would be sent, but that is not supported in this situation.
+
+            // this should ACK our SYN (iss)
+            if(!SegmentUtil.inWindow(segment.getAck(), segment.getAck(), tcb.getInitialSendSequenceNumber()+2)){
+                // ACK outside window. Normally a RESET would be sent, but that is not supported in this situation.
                 Log.w(TAG, "onSegmentArrive(): unexpected ACK num (segment discarded)");
                 return;
-            } else if(SegmentUtil.isLess(segment.getAck(), tcb.getSendNext()+1) ||
-                    SegmentUtil.isGreater(segment.getAck(), tcb.getSendUnacknowledged()-1)) {
+            } else if(SegmentUtil.inWindow(tcb.getSendUnacknowledged(), segment.getAck(), tcb.getSendNext()+1)){
                 // Acceptable ack
                 Log.v(TAG, "onSegmentArrive(): acceptable ACK received");
             } else {
@@ -188,7 +188,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
             tcb.setSendUnacknowledged(segment.getAck());
             tcb.removeFromRetransmissionQueue(segment.getAck());
 
-            if(SegmentUtil.isGreater(tcb.getSendUnacknowledged(), tcb.getInitialSendSequenceNumber())){
+            if(SegmentUtil.isAcked(tcb.getInitialSendSequenceNumber(), segment.getAck(), 1)){
                 // our SYN has been ACKed
                 tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
 
@@ -229,7 +229,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
     private boolean handleACKArriveInDefaultState(Segment segment){
         switch (tcb.getState()) {
             case SYN_RECEIVED:
-                if(SegmentUtil.isLess(segment.getAck(), tcb.getSendNext()+1) || SegmentUtil.isGreater(segment.getAck(), tcb.getSendUnacknowledged())){
+                if(SegmentUtil.inWindow(tcb.getSendUnacknowledged(), segment.getAck(), tcb.getSendNext()+1)){
                     tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
                 } else {
                     // RESET should be send, not supported though.
@@ -242,32 +242,29 @@ public class SegmentHandler implements OnSegmentArriveListener {
             case FIN_WAIT_2:
             case CLOSE_WAIT:
             case CLOSING:
-                if(SegmentUtil.isLess(segment.getAck(), tcb.getSendNext()+1) || SegmentUtil.isGreater(segment.getAck(), tcb.getSendUnacknowledged())){
+                if(SegmentUtil.inWindow(tcb.getSendUnacknowledged()+1, segment.getAck(), tcb.getSendNext()+1)){
                     tcb.setSendUnacknowledged(segment.getAck());
                     tcb.removeFromRetransmissionQueue(segment.getAck());
-                } else if(SegmentUtil.isLess(segment.getAck(), tcb.getSendUnacknowledged())){
+
+                    // TODO: normally window size would be updated here. However, that is not supported in this implementation
+                } else if(SegmentUtil.inWindow(tcb.getSendUnacknowledged()-tcb.getSendWindow(), segment.getAck(), tcb.getSendUnacknowledged())){
                     Log.v(TAG, "onSegmentArrive(): duplicate ACK received. Ignoring");
-                } else if(SegmentUtil.isGreater(segment.getAck(), tcb.getSendNext())){
+                } else if(SegmentUtil.inWindow(tcb.getSendNext()+1, segment.getAck(), tcb.getSendNext()+tcb.getSendWindow())){
                     Log.v(TAG, "onSegmentArrive(): ACK acks non-sent seq num. Dropping segment");
                     // TODO: send ACK
                     return false;
                 }
 
-                if(SegmentUtil.isLess(segment.getAck(), tcb.getSendNext()+1) || SegmentUtil.isGreater(segment.getAck(), tcb.getSendUnacknowledged())){
-                    // TODO: normally window size would be updated here. However, that is not supported in this implementation
-                }
-
                 if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_1) {
                     // Check if our FIN has been ACKed
-                    if(SegmentUtil.isGreater(segment.getAck(), tcb.getUnacknowledgedFin())){
+                    if(SegmentUtil.isAcked(tcb.getUnacknowledgedFin(), segment.getAck())){
                         tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_2);
                     }
                 } else if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_2) {
                     // TODO: check if retransmission queue is empty. If so:
                     // return OK to users close call
                 } else if (tcb.getState() == TransmissionControlBlock.State.CLOSING) {
-                    if(SegmentUtil.isGreater(segment.getAck(), tcb.getUnacknowledgedFin())){
-
+                    if(SegmentUtil.isAcked(tcb.getUnacknowledgedFin(), segment.getAck())){
                         // This ACK ACKs our FIN, so move to TIME_WAIT and start timer
                         tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
                         tcb.startTimeWaitTimer();
@@ -372,7 +369,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 return;
             case FIN_WAIT_1:
                 // Check if our FIN has been ACKed
-                if(SegmentUtil.isGreater(segment.getAck(), tcb.getUnacknowledgedFin())){
+                if(SegmentUtil.isAcked(tcb.getUnacknowledgedFin(), segment.getAck())){
                     tcb.enterState(TransmissionControlBlock.State.TIME_WAIT);
                     // TODO: start time-wait timer, turn of other timers
                     tcb.startTimeWaitTimer();

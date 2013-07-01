@@ -113,17 +113,16 @@ public class TCP {
             case CLOSE_WAIT:
                 // Send data to receiver (segmentize where necessary)
                 int totalWrittenData = 0;
-                long lastSeqNum;
                 int writtenData;
                 int dataLeft = len;
+                Segment outSegment;
                 do {
                     synchronized (tcb){
-                        Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                        outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
                         writtenData = outSegment.setData(buf, offset+totalWrittenData, dataLeft);
                         dataLeft -= writtenData;
                         totalWrittenData += writtenData;
 
-                        lastSeqNum = (outSegment.getSeq() + outSegment.getLen() - 1) % Integer.MAX_VALUE;
                         IP.Packet packet = IPUtil.getPacket(outSegment);
                         try {
                             Log.v(TAG, "Sending: " + outSegment.toString());
@@ -143,10 +142,10 @@ public class TCP {
                 sendIssued = true;
 
                 // wait until all segments have been acknowledged
-                boolean acknowledged = tcb.waitForAck(lastSeqNum);
+                boolean acknowledged = tcb.waitForAck(outSegment);
 
                 if(!acknowledged){
-                    Log.w(TAG, "Segment not acknowledged. Was waiting for " + lastSeqNum + ", but got " + tcb.getSendUnacknowledged());
+                    Log.w(TAG, "Segment not acknowledged. Was waiting for " + outSegment.getLastSeq() + ", but got " + tcb.getSendUnacknowledged());
                 }
 
                 return (acknowledged) ? totalWrittenData : -1;
@@ -381,7 +380,7 @@ public class TCP {
                         tcb.advanceSendNext(segment.getLen());
 
                         tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
-                        tcb.setUnacknowledgedFin(segment.getSeq());
+                        tcb.setUnacknowledgedFin(segment);
                     }
 
                     // Wait until state is CLOSED
@@ -413,7 +412,7 @@ public class TCP {
                         tcb.advanceSendNext(segment.getLen());
 
                         tcb.enterState(TransmissionControlBlock.State.LAST_ACK);
-                        tcb.setUnacknowledgedFin(segment.getSeq());
+                        tcb.setUnacknowledgedFin(segment);
                     }
 
                     // Wait until state is CLOSED

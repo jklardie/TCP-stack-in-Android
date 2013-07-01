@@ -17,6 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
+import nl.vu.cs.cn.tcp.segment.Segment;
 import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 import nl.vu.cs.cn.tcp.timeout.TimeoutHandler;
 
@@ -64,15 +65,15 @@ public class TransmissionControlBlock {
     private short foreignPort;
 
     // sequence variables
-    private long iss;            // initial send sequence number
-    private long irs;            // initial receive sequence number
+    private long iss;               // initial send sequence number
+    private long irs;               // initial receive sequence number
 
     // send sequence variables (note that window and urgent pointer info is not used)
-    private long snd_una;        // send - unacknowledged sequence number
-    private long snd_nxt;        // send - next sequence number
-    private short snd_wnd;      // send - window (offset of snd_una)
+    private long snd_una;           // send - unacknowledged sequence number
+    private long snd_nxt;           // send - next sequence number
+    private short snd_wnd;          // send - window (offset of snd_una)
 
-    private long fin_una;        // unacknowledged FIN sequence number
+    private Segment fin_una;        // unacknowledged FIN segment
 
 
     // receive sequence variables
@@ -174,23 +175,16 @@ public class TransmissionControlBlock {
     }
 
     /**
-     * Wait until the specified sequence number has been ACKed. Note that
-     * if you want to wait for the full packet to be acked, make sure to use
-     * the last segment number of the packet (SEG.SEQ + SEG.LEN - 1)
+     * Wait until the specified segment has been completely ACKed.
      *
-     * This has happened when the segment with the given sequence number is
-     * removed from the retransmission queue.
-     *
-     * @param seqNum
+     * @param segment
      * @return true if and only if the packet has been ACKed within the number of retries
      */
-    public boolean waitForAck(long seqNum){
-        seqNum %= Integer.MAX_VALUE;
-
+    public boolean waitForAck(Segment segment){
         retransmissionLock.lock();
         try {
             int i;
-            for(i=0; i<MAX_RETRANSMITS+1 && !SegmentUtil.isLess(seqNum, getSendUnacknowledged()); i++){
+            for(i=0; i<MAX_RETRANSMITS+1 && !SegmentUtil.isAcked(segment, getSendUnacknowledged()); i++){
                 try {
                     retransmissionQueueChanged.await();
                 } catch (InterruptedException e) {
@@ -200,9 +194,10 @@ public class TransmissionControlBlock {
 
             // either the packet has been met, or the number of retransmits have been
             // reached, and the packet did not arrive
-            Log.v(TAG, "Packet " + seqNum + " acnowledged? : " + SegmentUtil.isLess(seqNum, getSendUnacknowledged()));
+            boolean isAcked = SegmentUtil.isAcked(segment, getSendUnacknowledged());
+            Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acnowledged? : " + isAcked);
 
-            return SegmentUtil.isLess(seqNum, getSendUnacknowledged());
+            return isAcked;
         } finally {
             retransmissionLock.unlock();
         }
@@ -389,15 +384,15 @@ public class TransmissionControlBlock {
      * Set unacknowledged FIN sequence number
      * @param fin_una
      */
-    public void setUnacknowledgedFin(long fin_una){
-        this.fin_una = fin_una % Integer.MAX_VALUE;
+    public void setUnacknowledgedFin(Segment fin_una){
+        this.fin_una = fin_una;
     }
 
     /**
      * Get the unacknowledged FIN sequence number
      * @return
      */
-    public long getUnacknowledgedFin(){
+    public Segment getUnacknowledgedFin(){
         return fin_una;
     }
 
@@ -533,7 +528,7 @@ public class TransmissionControlBlock {
     public void removeFromRetransmissionQueue(long ack){
         int numRemoves = 0;
         for(RetransmissionSegment segment : retransmissionMap.keySet()){
-            if(SegmentUtil.inWindow(segment.getSegment().getSeq(), segment.getSegment().getLastSeq(), ack)){
+            if(SegmentUtil.isAcked(segment.getSegment(), ack)){
                 retransmissionMap.remove(segment).cancel(true);
                 Log.v(TAG, "Removed segment " + segment.getSegment().getSeq() + " from retransmission queue");
                 numRemoves++;
