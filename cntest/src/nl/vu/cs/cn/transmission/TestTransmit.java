@@ -2,6 +2,7 @@ package nl.vu.cs.cn.transmission;
 
 
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 import nl.vu.cs.cn.TestBase;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
@@ -83,7 +84,22 @@ public class TestTransmit extends TestBase {
         public void run() {
             serverSocket.accept();
 
-            // give server time to reply to client
+            byte[] buf;
+            int bytesRead, bytesExpected;
+            for(int i=0; i<data.length; i++){
+                // data could be larger than max packet size, so receive until we received all
+                bytesExpected = data[i].length;
+                buf = new byte[bytesExpected];
+                bytesRead = 0;
+                do {
+                    bytesRead += serverSocket.read(buf, bytesRead, bytesExpected-bytesRead);
+                } while (bytesRead < bytesExpected);
+
+                assertEquals(bytesExpected, bytesRead);
+                assertTrue("Expected to receive exact same data", Arrays.equals(data[i], buf));
+
+            }
+
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
