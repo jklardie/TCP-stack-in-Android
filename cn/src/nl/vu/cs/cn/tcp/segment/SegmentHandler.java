@@ -233,7 +233,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
                 } else {
                     // RESET should be send, not supported though.
-                    // TODO: should we accept the data and fin if the ACK is incorrect?
                     // This should never happen as we already check ACK validity earlier
                     return true;
                 }
@@ -261,6 +260,8 @@ public class SegmentHandler implements OnSegmentArriveListener {
                         tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_2);
                     }
                 } else if (tcb.getState() == TransmissionControlBlock.State.FIN_WAIT_2) {
+                    // This ACKs our FIN packet
+
                     // TODO: check if retransmission queue is empty. If so:
                     // return OK to users close call
                 } else if (tcb.getState() == TransmissionControlBlock.State.CLOSING) {
@@ -411,9 +412,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
             long left = tcb.getReceiveNext();
             long right = tcb.getReceiveNext() + tcb.getReceiveWindow();
             return SegmentUtil.overlap(left, right, segment.getSeq(), segment.getLastSeq());
-
-            // TODO: handle custom implementation here (left == segment.getSeq()), since packets
-            // can not arrive out of order
         }
     }
 
