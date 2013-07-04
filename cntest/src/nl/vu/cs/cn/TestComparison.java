@@ -28,7 +28,7 @@ public class TestComparison extends TestCase {
     public void testComparisonOverlap() throws Exception {
         int max = Integer.MAX_VALUE;
 
-        // seq num has wrapped, so left is max, right is 10
+        // seq num has wrapped from max to 10.
         assertTrue(SegmentUtil.inWindow(max, 6, 10));
         assertTrue(SegmentUtil.inWindow(max, max, 10));
         assertTrue(SegmentUtil.inWindow(max, 9, 10));
