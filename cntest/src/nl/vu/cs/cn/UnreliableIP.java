@@ -5,6 +5,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.util.Random;
 
+import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.Segment;
 
 /**
@@ -28,6 +29,8 @@ public class UnreliableIP extends IP {
 
     private double dropSYNRate, dropSYNACKRate, dropACKRate, dropFINRate;
     private long sendLatencyMs;
+    private boolean corruptFirstDataPacket;
+    private long corruptedDataSeq = -1;
 
     public UnreliableIP(int address) throws IOException {
         super(address);
@@ -64,6 +67,10 @@ public class UnreliableIP extends IP {
     protected void setIPSendLatency(long sendLatencyMs){
         Log.v("UnreliableIP", "Setting latency to " + sendLatencyMs);
         this.sendLatencyMs = sendLatencyMs;
+    }
+
+    protected void corruptFirstDataPacket(boolean corrupt){
+        corruptFirstDataPacket = corrupt;
     }
 
     @Override
@@ -111,6 +118,19 @@ public class UnreliableIP extends IP {
             droppedFIN = true;
             return dataClone.length;
 
+        } else if(segment.getDataLength() > 0 && !segment.isFin() && !segment.isSyn()){
+            if(corruptFirstDataPacket && (corruptedDataSeq == -1 || corruptedDataSeq == segment.getSeq())){
+                // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
+                byte[] corruptData = new byte[segment.getDataLength()];
+                rand.nextBytes(corruptData);
+
+                int dataOffset = Segment.HEADER_SIZE;
+                System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
+
+                corruptedDataSeq = segment.getSeq();
+
+                Log.i(TestBase.TAG, "Corrupting data segment: " + segment.toString());
+            }
         }
 
         if(sendLatencyMs > 0){

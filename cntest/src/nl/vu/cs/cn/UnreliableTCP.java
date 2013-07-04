@@ -34,4 +34,8 @@ public class UnreliableTCP extends TCP {
     public void setIPSendLatency(long sendLatencyMs){
         unreliableIP.setIPSendLatency(sendLatencyMs);
     }
+
+    public void corruptFirstDataPacket(boolean corrupt){
+        unreliableIP.corruptFirstDataPacket(corrupt);
+    }
 }
