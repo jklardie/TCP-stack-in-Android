@@ -1,5 +1,7 @@
 package nl.vu.cs.cn.tcp.segment;
 
+import android.util.Log;
+
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -42,7 +44,7 @@ public class Segment {
      */
     private static final short DATA_OFFSET = 5;
 
-    private static final short HEADER_SIZE = DATA_OFFSET * 4;
+    public static final short HEADER_SIZE = DATA_OFFSET * 4;
 
     private IP.IpAddress sourceAddr;
     private IP.IpAddress destinationAddr;
