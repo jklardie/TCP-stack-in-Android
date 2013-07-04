@@ -12,18 +12,7 @@ public class TestConnectSegmentLoss extends TestConnect {
     public void performTestDropFirst() throws Exception {
         startServer(new ServerRunnable());
 
-        boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
-
-        assertTrue("Expected clientSocket.connect() to return true", connected);
-        assertEquals(TransmissionControlBlock.State.ESTABLISHED,
-                getClientState());
-
-        // wait for server
-        Thread.sleep(2000);
-
-        assertEquals("Three-way handshake succeeded. Server should be in ESTABLISHED state",
-                TransmissionControlBlock.State.ESTABLISHED,
-                getServerState());
+        connect();
     }
 
 }

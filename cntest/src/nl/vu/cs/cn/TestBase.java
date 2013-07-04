@@ -58,6 +58,22 @@ public class TestBase extends TestCase {
         }
     }
 
+    protected void connect() throws Exception {
+        // make sure we are connected (both client and server)
+        boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
+
+        assertTrue("Expected clientSocket.connect() to return true", connected);
+        assertEquals("After connect() client should be in the ESTABLISHED state",
+                TransmissionControlBlock.State.ESTABLISHED,
+                getClientState());
+
+        Thread.sleep(1000);
+
+        assertEquals("Server should never return before reaching the ESTABLISHED state",
+                TransmissionControlBlock.State.ESTABLISHED,
+                getServerState());
+    }
+
     /**
      * Start a new tread and run the runnable
      * @param runnable

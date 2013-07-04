@@ -15,19 +15,11 @@ public class TestSimultaneousClose extends TestBase {
 
         startServer(new ServerRunnable());
 
-        // make sure we are connected (both client and server)
-        boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
-
-        assertTrue("Expected clientSocket.connect() to return true", connected);
-        assertEquals("After connect() client should be in the ESTABLISHED state",
-                TransmissionControlBlock.State.ESTABLISHED,
-                getClientState());
+        connect();
 
         // set ip packet latency to 1s so we can perform the simultaneous close
         client.setIPSendLatency(3000);
         server.setIPSendLatency(3000);
-
-        Thread.sleep(1000);
 
         // synchronize client and server so they both close at the same time
         latch.countDown();
