@@ -10,6 +10,7 @@ import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 public class TestTransmit extends TestBase {
 
     protected static final String[] MESSAGES = {
+            "\u000C\u0026\u0008",
             "This is the first message",
             "This is another message that I'm sending",
             "Ру́сский язы́к относится к восточной группе славянских языков, принадлежащих индоевропейской се" +
