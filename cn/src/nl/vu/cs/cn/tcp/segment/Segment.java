@@ -5,8 +5,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.tcp.ChecksumUtil;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
-import nl.vu.cs.cn.tcp.Util;
 
 /**
  * A TCP segment which contains a header and a data part.
@@ -141,7 +141,7 @@ public class Segment {
         // check if checksum is correct
         bb.putShort(checksumPosition, (short)0);
 
-        short expectedChecksum = Util.calculateChecksum(bb, this.sourceAddr, this.destinationAddr, bb.capacity());
+        short expectedChecksum = ChecksumUtil.calculateChecksum(bb, this.sourceAddr, this.destinationAddr, bb.capacity());
         validChecksum = (expectedChecksum == checksum);
     }
 
@@ -347,7 +347,7 @@ public class Segment {
             bb.put(data);
         }
 
-        checksum = Util.calculateChecksum(bb, sourceAddr, destinationAddr, bb.capacity());
+        checksum = ChecksumUtil.calculateChecksum(bb, sourceAddr, destinationAddr, bb.capacity());
         bb.putShort(checksumPosition, checksum);
 
         return bb.array();

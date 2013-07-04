@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 import nl.vu.cs.cn.IP;
 
-public class Util {
+public class ChecksumUtil {
 
     // Size of pseudo header in bytes
     private static final int PSEUDO_HEADER_SIZE = 96 / 8;
