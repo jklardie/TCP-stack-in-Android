@@ -1,7 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" >
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+              android:orientation="vertical"
+              android:background="@color/light_grey">
+
+    <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1">
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/btn_send_picture_1"
+                android:text="@string/btn_image"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:enabled="false"/>
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/btn_send_1"
+                android:text="@string/btn_send"
+                android:layout_alignParentBottom="true"
+                android:layout_toLeftOf="@id/btn_send_picture_1"
+                android:enabled="false"/>
+
+        <EditText
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/msg_input_1"
+                android:layout_alignParentBottom="true"
+                android:layout_toLeftOf="@id/btn_send_1"
+                android:enabled="false"
+                android:hint="@string/message_input_hint"/>
+
+        <ScrollView
+                android:id="@+id/scrollview1"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_marginBottom="1dp"
+                android:background="@android:color/white"
+                android:layout_above="@id/msg_input_1">
+
+            <LinearLayout
+                    android:id="@+id/messages_container_1"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:orientation="vertical"/>
+
+        </ScrollView>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1">
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/btn_send_picture_2"
+                android:text="@string/btn_image"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:enabled="false"/>
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/btn_send_2"
+                android:text="@string/btn_send"
+                android:layout_alignParentBottom="true"
+                android:layout_toLeftOf="@id/btn_send_picture_2"
+                android:enabled="false"/>
+
+        <EditText
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/msg_input_2"
+                android:layout_alignParentBottom="true"
+                android:layout_toLeftOf="@id/btn_send_2"
+                android:enabled="false"
+                android:hint="@string/message_input_hint"/>
+
+        <ScrollView
+                android:id="@+id/scrollview2"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_marginTop="1dp"
+                android:background="@android:color/white"
+                android:layout_above="@id/msg_input_2">
+
+            <LinearLayout
+                    android:id="@+id/messages_container_2"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="10dp"
+                    android:orientation="vertical"/>
+
+        </ScrollView>
+
+    </RelativeLayout>
 
 </LinearLayout>
