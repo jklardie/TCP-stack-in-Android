@@ -167,6 +167,20 @@ This class also provides methods to block until a certain state is reached (\met
 
 Other methods provide functionality to queue received data that has to be processed, and also to wait for this data to arrive (\methodname{public void waitForDataToProcess()}). Also, this class takes care of the retransmission queue, and provides methods to add or remove segments from this queue.
 
+\subsection{SegmentUtil}
+The \classname{SegmentUtil} provides four static methods to construct SYN-, SYN,ACK-, FIN-, or data-packets. Providing the sequence number and the acknowledgement number (where needed), the correct \classname{Segment} object is returned. 
+
+Also, this class contains methods used for sequence number arithmetic. It is important to notice that sequence numbers have a maximum value, and will wrap around at the point they reach this value. It is therefore impossible to compare two sequence numbers with normal arithmetic, to see if one was before the other. The following methods help to perform such checks in a safe manner:
+
+\begin{itemize}
+ \item \textbf{public static boolean inWindow(long left, long seq, long right)}: This method does a wraparound-safe check to see if \emph{seq} is inside the half open window [\emph{left}, \emph{right}). If \emph{left} $\leq$ \emph{right}, then it is assumed that the sequence numbers have wrapped around (i.e. from a high number, near the maximum, to a low, near 0). 
+ 
+ \item \textbf{public static boolean overlap(long left1, long right1, long left2, long right2)}: This method does a wraparound-safe check to see if the windows bounded by [\emph{left1}, \emph{right1}) and [\emph{left2}, \emph{right2}) overlap each other in at least one point.
+ 
+ \item \textbf{public static boolean isAcked(Segment segment, long ack)}: This method checks if the given \emph{segment} is completely acknowledged by the given \emph{ack}.
+\end{itemize}
+
+
 \subsection{ChecksumUtil}
 This class provides one public method \methodname{public static short calculateChecksum(ByteBuffer tcpPacketBuffer, IP.IpAddress srcAddr, IP.IpAddress destAddr, int tcpLength)}, which calculates the checksum for a given packet (already encoded in the \emph{tcpPacketBuffer}). 
 

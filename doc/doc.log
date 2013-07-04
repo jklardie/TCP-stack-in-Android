@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.13 (TeX Live 2013/dev) (format=pdflatex 2013.7.4)  4 JUL 2013 22:30
+This is pdfTeX, Version 3.1415926-2.5-1.40.13 (TeX Live 2013/dev) (format=pdflatex 2013.7.4)  4 JUL 2013 22:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -271,21 +271,31 @@ Overfull \hbox (108.06668pt too wide) in paragraph at lines 166--167
 knowledged()\OT1/phv/m/n/10 ). 
  []
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 173.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 176.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 176.
+
+Overfull \hbox (1.14125pt too wide) in paragraph at lines 178--179
+[]\OT1/phv/b/n/10 public static boolean over-lap(long left1, long right1, long 
+left2, long right2)\OT1/phv/m/n/10 : This method
+ []
+
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 187.
 [6]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 173.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 187.
  (./doc.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 173.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 173.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 187.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 187.
 Package rerunfilecheck Info: File `doc.out' has not changed.
-(rerunfilecheck)             Checksum: 874D0ADEB7361287034363AF7B7B795E;531.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 173.
+(rerunfilecheck)             Checksum: 00375A752805E89E6B27B115CD4DEAAE;592.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 187.
  ) 
 Here is how much of TeX's memory you used:
- 5397 strings out of 495063
- 78207 string characters out of 3182195
+ 5401 strings out of 495063
+ 78265 string characters out of 3182195
  163376 words of memory out of 3000000
- 8562 multiletter control sequences out of 15000+200000
+ 8565 multiletter control sequences out of 15000+200000
  15379 words of font info for 29 fonts, out of 3000000 for 9000
  14 hyphenation exceptions out of 8191
  29i,11n,35p,714b,448s stack positions out of 5000i,500n,10000p,200000b,50000s
@@ -295,10 +305,10 @@ f-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/share/texlive/texmf-dist
 /fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1
 /urw/helvetic/uhvr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helveti
 c/uhvro8a.pfb>
-Output written on doc.pdf (6 pages, 67026 bytes).
+Output written on doc.pdf (6 pages, 69369 bytes).
 PDF statistics:
- 94 PDF objects out of 1000 (max. 8388607)
- 80 compressed objects within 1 object stream
- 16 named destinations out of 1000 (max. 500000)
- 73 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 98 PDF objects out of 1000 (max. 8388607)
+ 84 compressed objects within 1 object stream
+ 17 named destinations out of 1000 (max. 500000)
+ 81 words of extra memory for PDF output out of 10000 (max. 10000000)
 

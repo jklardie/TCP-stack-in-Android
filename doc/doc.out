@@ -6,4 +6,5 @@
 \BOOKMARK [1][-]{section.2}{Other classes}{}% 6
 \BOOKMARK [2][-]{subsection.2.1}{Segment}{section.2}% 7
 \BOOKMARK [2][-]{subsection.2.2}{TransmissionControlBlock}{section.2}% 8
-\BOOKMARK [2][-]{subsection.2.3}{ChecksumUtil}{section.2}% 9
+\BOOKMARK [2][-]{subsection.2.3}{SegmentUtil}{section.2}% 9
+\BOOKMARK [2][-]{subsection.2.4}{ChecksumUtil}{section.2}% 10
