@@ -422,9 +422,8 @@ public class TCP {
                     return true;
                 case FIN_WAIT_1:
                 case FIN_WAIT_2:
-                    // TODO: according assignment this should also return true
-                    Log.e(TAG, "Error in close(): connection closing");
-                    return false;
+                    Log.w(TAG, "close(): connection was already closing. Ignoring call");
+                    return true;
                 case CLOSE_WAIT:
                     // TODO: Queue this request until all preceding SENDs have been segmentized;
 
