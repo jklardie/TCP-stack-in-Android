@@ -19,12 +19,14 @@ public class UnreliableIP extends IP {
         RANDOM
     }
 
-    private boolean droppedSYN, droppedSYNACK, droppedACK;
+    private boolean droppedSYN, droppedSYNACK, droppedACK, droppedFIN;
 
     private DropType dropSYNType = DropType.NONE;
     private DropType dropSYNACKType = DropType.NONE;
     private DropType dropACKType = DropType.NONE;
-    private double dropSYNRate, dropSYNACKRate, dropACKRate;
+    private DropType dropFINType = DropType.NONE;
+
+    private double dropSYNRate, dropSYNACKRate, dropACKRate, dropFINRate;
     private long sendLatencyMs;
 
     public UnreliableIP(int address) throws IOException {
@@ -49,6 +51,13 @@ public class UnreliableIP extends IP {
         dropACKType = type;
         if(dropRates.length > 0){
             dropACKRate = dropRates[0];
+        }
+    }
+
+    protected void dropFIN(DropType type, double... dropRates){
+        this.dropFINType = type;
+        if(dropRates.length > 0){
+            dropFINRate = dropRates[0];
         }
     }
 
@@ -92,6 +101,14 @@ public class UnreliableIP extends IP {
 
             Log.i(TestBase.TAG, "Dropping ACK segment: " + segment.toString());
             droppedACK = true;
+            return dataClone.length;
+
+        } else if(segment.isFin() && (dropFINType == DropType.ALL ||
+                (dropFINType == DropType.FIRST && !droppedFIN) ||
+                (dropFINType == DropType.RANDOM && rand.nextDouble() < dropFINRate))){
+
+            Log.i(TestBase.TAG, "Dropping FIN segment: " + segment.toString());
+            droppedFIN = true;
             return dataClone.length;
 
         }
