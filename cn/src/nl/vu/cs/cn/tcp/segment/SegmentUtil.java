@@ -1,7 +1,5 @@
 package nl.vu.cs.cn.tcp.segment;
 
-import android.util.Log;
-
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public abstract class SegmentUtil {

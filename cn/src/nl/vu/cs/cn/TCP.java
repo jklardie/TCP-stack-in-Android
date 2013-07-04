@@ -5,11 +5,11 @@ import android.util.Log;
 import java.io.IOException;
 
 import nl.vu.cs.cn.IP.IpAddress;
+import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.RetransmissionSegment;
 import nl.vu.cs.cn.tcp.segment.Segment;
 import nl.vu.cs.cn.tcp.segment.SegmentHandler;
 import nl.vu.cs.cn.tcp.segment.SegmentReceiver;
-import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 
 /**
@@ -85,7 +85,7 @@ public class TCP {
      * @return
      */
     private int send(byte[] buf, int offset, int len) {
-        switch(tcb.getState()){
+        switch (tcb.getState()) {
             case CLOSED:
                 Log.e(TAG, "Error in send(): connection does not exist");
                 return -1;
@@ -94,7 +94,7 @@ public class TCP {
                 return -1;
             case SYN_SENT:
             case SYN_RECEIVED:
-                    // TODO: possibly use this later. For now unsupported
+                // TODO: possibly use this later. For now unsupported
 //                // Queue data for transmission after entering ESTABLISHED state
 //                int bytesQueued = tcb.queueDataForTransmission(buf, offset, len);
 //                if(bytesQueued < len){
@@ -117,9 +117,9 @@ public class TCP {
                 int dataLeft = len;
                 Segment outSegment;
                 do {
-                    synchronized (tcb){
+                    synchronized (tcb) {
                         outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
-                        writtenData = outSegment.setData(buf, offset+totalWrittenData, dataLeft);
+                        writtenData = outSegment.setData(buf, offset + totalWrittenData, dataLeft);
                         dataLeft -= writtenData;
                         totalWrittenData += writtenData;
 
@@ -144,7 +144,7 @@ public class TCP {
                 // wait until all segments have been acknowledged
                 boolean acknowledged = tcb.waitForAck(outSegment);
 
-                if(!acknowledged){
+                if (!acknowledged) {
                     Log.w(TAG, "Segment not acknowledged. Was waiting for " + outSegment.getLastSeq() + ", but got " + tcb.getSendUnacknowledged());
                 }
 
