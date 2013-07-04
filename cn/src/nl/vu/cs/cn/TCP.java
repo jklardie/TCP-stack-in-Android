@@ -425,7 +425,15 @@ public class TCP {
 
                     return true;
                 case CLOSE_WAIT:
-                    // TODO: Queue this request until all preceding SENDs have been segmentized;
+                    // Queue this close until all preceding SENDs have finished
+                    // In this implementation we always send data immediately, so no
+                    // data is added to the transmitQueue (i.e. tcb.hasDataToTransmit() will
+                    // always return false).
+                    if(tcb.hasDataToTransmit() || tcb.hasDataToRetransmit()){
+                        Log.v(TAG, "Waiting until all packets have been sent");
+                        tcb.waitUntilAllAcknowledged();
+                        Log.v(TAG, "All packets are either acknowledged or timed out");
+                    }
 
                     // Send a FIN segment, enter LAST_ACK state
                     synchronized (tcb){
