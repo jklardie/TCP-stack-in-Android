@@ -28,7 +28,7 @@
 \maketitle
 
 \section{Architecture overview}
-The main architecture for this TCP stack is implemented in the classes \classname{TCP}, \classname{SegmentHandler} and \classname{TimeoutHandler}. These classes handle all the events that can occur inside TCP.
+The main architecture for this TCP stack is implemented in the classes \classname{TCP}, \classname{SegmentHandler} and \classname{TimeoutHandler}. These classes handle all the events that can occur inside TCP, like timeouts, user calls, and the arrival of segments.
 
 \subsection{TCP}
 This class contains the main methods for handling the TCP stack. It exposes one public constructor, which creates the required underlying IP stack. Also, it exposes three methods:
@@ -45,14 +45,14 @@ The \classname{TCP} class also has two private methods for sending and receiving
  \item \textbf{private int send(byte[] buf, int offset, int len)}: This method tries to send \emph{len} bytes from the given buffer \emph{buf}, starting at \emph{offset}. The number of bytes written and acknowledged is returned, or -1 in case of any error. The behavior follows the strict state machine as defined in RFC 793. The following can happen depending on the state the stack is in: 
  
   \begin{itemize}
-    \item \state{established} or \state{close-wait}: the data is segmentized (to make sure the maximum packet size is not overridden, the segments are sent, and the variable SND.NXT (next sequence number to use) is incremented. Now the method blocks, until all data has been acknowledged. If all data has been acknowledged, the amount of written data is returned, and -1 otherwise.
+    \item \state{established} or \state{close-wait}: the data is segmentized (to make sure the maximum packet size is not overridden), the segments are sent, and the variable SND.NXT (next sequence number to use) is incremented. Now the method blocks, until all data has been acknowledged. If all data has been acknowledged, the amount of written data is returned, and -1 otherwise.
     \item \state{closed}: error, because the connection does not exist.
     \item \state{syn-sent} or \state{syn-received}: error, because the connection is not established.
     \item \state{listen}: error, because switching from passive to active open is not supported.
     \item other states: error, because the connection is closing.
   \end{itemize}
   
-  \item \textbf{private int receive(byte[] buf, int offset, int maxlen)}: This method tries to receive \emph{maxlen} bytes from the other and, and writes them into the given buffer \emph{buf}, starting at \emph{offset}. The number of bytes read is returned, or -1 in case of any error. Just like send(), this method follows the strict TCP state machine. The following can happen depending on the state the stack is in:
+  \item \textbf{private int receive(byte[] buf, int offset, int maxlen)}: This method tries to receive \emph{maxlen} bytes from the other end, and writes them into the given buffer \emph{buf}, starting at \emph{offset}. The number of bytes read is returned, or -1 in case of any error. Just like send(), this method follows the strict TCP state machine. The following can happen depending on the state the stack is in:
   
   \begin{itemize}
     \item \state{established}, \state{fin-wait-1} or \state{fin-wait-2}: If there is no data to process in the queue, block until there is data. When data is available, write this data to the given buffer, and return the number of bytes read.
@@ -68,7 +68,7 @@ The \classname{TCP} class also has two private methods for sending and receiving
 This is a subclass of \classname{TCP}, and the only one that is exposed to the end user. It exposes a total of five methods used to open a connection, read or write data, and to close a connection.
 
 \begin{itemize}
- \item \textbf{public boolean connect(IpAddress dst, int port)}: This method tries to create a connection by sending the initial synchronize packet in the three-way handshake. The method blocks until the connection is established. It returns true if the connection is established, or false if an error occurs. In detail, this method performs the following steps (if the state was closed):
+ \item \textbf{public boolean connect(IpAddress dst, int port)}: This method tries to create a connection by sending the initial synchronize packet to start the three-way handshake. The method blocks until the connection is established. It returns true if the connection is established, or false if an error occurs. In detail, this method performs the following steps (if the state was closed):
  
   \begin{itemize}
     \item Store the foreign socket information in the \classname{TransmissionControlBlock} object.
@@ -77,7 +77,7 @@ This is a subclass of \classname{TCP}, and the only one that is exposed to the e
     \item Construct an SYN packet and send it to the foreign socket.
     \item Set the SND.NXT (next sequence number to use) and SND.UNA (last sequence number not acknowledged yet) variables.
     \item Enter the state \state{syn-sent}.
-    \item Wait until the state changes to either \state{established} (successfully connected) or \state{closed} (error).
+    \item Wait until the state changes to either \state{established} (successfully connected) or \state{closed} (error). This is possible because the \classname{SegmentHandler} takes care of incoming messages, and therefore also the messages used in the three-way handshake.
   \end{itemize}
 
    \item \textbf{public void accept()}: This method starts the segment receiver thread, and enters the \state{listen} state. After that, it simply blocks until the state changes to \state{established}. The \classname{SegmentHandler} that runs in a background thread will handle incoming SYN packets, and respond to them depending on the state the TCP stack is in at that moment. It will correctly perform the three-way handshake if the state is \state{listen}, and a SYN packet arrives.
@@ -113,7 +113,7 @@ The \classname{SegmentHandler} responds to all incoming packets according to the
   
   \item \state{syn-sent}: The initial SYN packet is sent, so a matching SYN,ACK packet is expected. The incoming packet is dropped if it does not contain the SYN and ACK control bits, and also if the ACK number is incorrect. If this is all correct, the variables RCV.NXT and IRS are set. Also, the SND.UNA is updated (because we received a new ACK), and all packets that are hereby acknowledged are removed from the transmission queue. If this ACK actually acknowledges our SYN packet, then the \state{established} state is entered and an ACK is sent in reply. Note that we do drop any data that was send along the SYN,ACK message.
   
-  \item any other state: first the sequence number of the packet is checked. A valid sequence number falls within the window of expected packets (greater than the previous sequence number, and smaller than the maximum packet size). Packets with invalid sequence numbers are dropped. After that, the following happens: 
+  \item any other state: first the sequence number of the packet is checked. A valid sequence number falls within the window of expected packets (greater than the previous sequence number, and smaller than the previous sequence number +  the maximum packet size). Packets with invalid sequence numbers are dropped. After that, the following happens: 
   
   \begin{itemize}
     \item If the packet contains the SYN control bit, it is dropped, because this is considered an error (we already synchronized sequence numbers before). 
@@ -123,21 +123,29 @@ The \classname{SegmentHandler} responds to all incoming packets according to the
       \item \state{syn-sent}: If this ACK acknowledges our SYN, we enter state \state{established}. 
       \item \state{last-ack}: Only thing that can arrive here is an acknowledgement to the sent FIN, so state \state{closed} is entered.
       \item \state{time-wait}: Only thing that can arrive here is a retransmission of the sent FIN. Here we restart the time-wait timer.
-      \item any other state: if the ACK is inside the expected window, the SND.UNA value is updated, and any packets that are now acknowledged are removed from the retransmission queue. Duplicate ACKs are ignored. If the state is \state{fin-wait-1} and our FIN is acked, we enter state \state{fin-wait-2}. If the state is \state{fin-wait-2}
+      \item any other state: if the ACK is inside the expected window, the SND.UNA value is updated, and any packets that are now acknowledged are removed from the retransmission queue. Duplicate ACKs are ignored. If the state is \state{fin-wait-1} and our FIN is acked, we enter state \state{fin-wait-2}. If the state is \state{closing} and our FIN is acknowledged, enter the \state{time-wait} state, and start the time-wait timer. 
     \end{itemize}
     
-    \item 
+    \item If the packet contains data, and in the state \state{established}, \state{fin-wait-1} or \state{fin-wait-2} the data is added to the processing queue. The RCV.NXT variable (next expected sequence number) is updated and an ACK packet is sent in reply. In any other state the data is unexpected, and ignored.
+    
+    \item If the packet contains the FIN flag, and in a state other than \state{closed}, \state{listen} and \state{syn-sent} the RCV.NXT variable is updated, and an ACK packet is sent. Next, depending on the state, the following happens:
+    
+    \begin{itemize}
+      \item \state{syn-received} or \state{established}: Enter \state{close-wait} state.
+      \item \state{fin-wait-1}: If this acknowledges our FIN, enter \state{time-wait} state, and start the time-wait timer.
+      \item \state{fin-wait-2}: Enter \state{time-wait} state, and start the time-wait timer.
+      \item \state{time-wait}: Restart the time-wait timer.
+      \item \state{close-wait}, \state{closing} or \state{last-ack}: Do nothing. Already closing connection.
+    \end{itemize}
+    
     
   \end{itemize}
   
 \end{itemize}
 
 
-
-
-
 \subsection{TimeoutHandler}
-The \classname{TimeoutHandler} class handles all timeouts that can occur inside the system. These timeouts can either be a user timeout, a retransmission timeout, of a time-wait timeout, handled in \methodname{onUserTimeout()}, \methodname{onRetransmissionTimeout()} and \methodname{onTimeWaitTimeout()} respectively.
+The \classname{TimeoutHandler} class handles all timeouts that can occur inside the system. These timeouts can either be a user timeout, a retransmission timeout, or a time-wait timeout, handled in \methodname{onUserTimeout()}, \methodname{onRetransmissionTimeout()} and \methodname{onTimeWaitTimeout()} respectively.
 
 \begin{itemize}
  \item \textbf{onUserTimeout()} is called if a packet is not acknowledged within a specific timeframe. In that situation all queues are flushed, the user gets an error for any outstanding calls, and the \state{closed} state is entered. Note that currently this method is not implemented.
@@ -153,6 +161,11 @@ The \classname{TimeoutHandler} class handles all timeouts that can occur inside 
 \item \textbf{onTimeWaitTimeout()} is called when the time-wait timeout expires. The time-wait timer is started when the TCP stack enters the \state{TIME-WAIT} state. This method sets the state to \state{closed}.
 
 \end{itemize}
+
+\section{Other classes}
+
+\subsection{Segment}
+The \classname{Segment} class represents a segment to be sent over the network. It contains all information needed by the TCP protocol like the source- and destination port, the sequence- and acknowledgement number, the window size, control bits, data, etc. Besides storing this information, it also takes care of encoding and decoding packets.
 
 
 \end{document}
