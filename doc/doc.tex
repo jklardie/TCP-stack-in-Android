@@ -163,7 +163,7 @@ The \classname{Segment} class represents a segment to be sent over the network. 
 \subsection{TransmissionControlBlock}
 This class keeps track of all information needed by an active TCP connection. Examples are the socket information, the next sequence number to use when sending, the next sequence number that is expected from the other side, the last unacknowledged sequence number, the current state, etc.
 
-This class also provides methods to block until a certain state is reached (\methodname{public void waitForStates(TransmissionControlBlock.State... states)}), until a certain segment has been acknowledged (\methodname{public boolean waitForAck(Segment segment)}), or to wait until all packets that have been sent are acknowledged (\methodname{public void waitUntilAllAcknowledged()}).
+This class also provides methods to block until a certain state is reached (\methodname{public void \\ waitForStates(TransmissionControlBlock.State... states)}), until a certain segment has been acknowledged (\methodname{public boolean waitForAck(Segment segment)}), or to wait until all packets that have been sent are acknowledged (\methodname{public void waitUntilAllAcknowledged()}).
 
 Other methods provide functionality to queue received data that has to be processed, and also to wait for this data to arrive (\methodname{public void waitForDataToProcess()}). Also, this class takes care of the retransmission queue, and provides methods to add or remove segments from this queue.
 
