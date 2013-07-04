@@ -6,7 +6,7 @@ import java.util.concurrent.CountDownLatch;
 import nl.vu.cs.cn.TestBase;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
-public class TestSimultaneousClose extends TestBase {
+public class TestCloseSimultaneous extends TestBase {
 
     private CountDownLatch latch;
 
