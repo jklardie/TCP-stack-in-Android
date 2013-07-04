@@ -31,7 +31,7 @@ public class TransmissionControlBlock {
     public static final int MAX_RETRANSMITS = 10;           // maximum number of retransmits
     public static final int TIME_WAIT_TIMEOUT_SEC = 5;     // number of time TIME WAIT should wait before entering CLOSE
 
-    private static final short IP_HEADER_SIZE = 20;           // size of IP header in bytes
+    public static final short IP_HEADER_SIZE = 20;           // size of IP header in bytes
     public static final short MAX_SEGMENT_SIZE = 8 * 1024 - IP_HEADER_SIZE;    // maximum packet size in bytes
 
     private static final int MAX_RETRANSMISSION_THREADS = 5;
@@ -199,13 +199,13 @@ public class TransmissionControlBlock {
                 } catch (InterruptedException e) {
                     // ignore, wait again
                 }
-                Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acnowledged? : " + SegmentUtil.isAcked(segment, getSendUnacknowledged()));
+                Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acknowledged? : " + SegmentUtil.isAcked(segment, getSendUnacknowledged()));
             }
 
             // either the packet has been met, or the number of retransmits have been
             // reached, and the packet did not arrive
             boolean isAcked = SegmentUtil.isAcked(segment, getSendUnacknowledged());
-            Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acnowledged? : " + isAcked);
+            Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acknowledged? : " + isAcked);
 
             return isAcked;
         } finally {
@@ -627,7 +627,14 @@ public class TransmissionControlBlock {
             // Cancel scheduled task (the call to retransmit)
             scheduledFuture.cancel(true);
 
-            // notify waiting threads
+            // if segments have been removed (because they where ACKed) signal waiting threads
+            retransmissionLock.lock();
+            try {
+                retransmissionQueueChanged.signalAll();
+            } finally {
+                retransmissionLock.unlock();
+            }
+
             allAckedLock.lock();
             try {
                 allSegmentsAcked.signalAll();
