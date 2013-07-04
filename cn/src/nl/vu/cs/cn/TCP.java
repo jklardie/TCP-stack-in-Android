@@ -424,10 +424,6 @@ public class TCP {
                     tcb.waitForStates(TransmissionControlBlock.State.CLOSED);
 
                     return true;
-                case FIN_WAIT_1:
-                case FIN_WAIT_2:
-                    Log.w(TAG, "close(): connection was already closing. Ignoring call");
-                    return true;
                 case CLOSE_WAIT:
                     // TODO: Queue this request until all preceding SENDs have been segmentized;
 
@@ -456,9 +452,8 @@ public class TCP {
 
                     return true;
                 default:
-                    // TODO: according to assignment this should return true (according to RFC it should return false)
-                    Log.e(TAG, "Error in close(): connection closing");
-                    return false;
+                    Log.w(TAG, "close(): connection was alraedy closing. Ignoring call");
+                    return true;
             }
         }
     }
