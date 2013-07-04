@@ -355,6 +355,10 @@ public class TCP {
                 case SYN_SENT:
                     // TODO: return "error:  closing" responses to any queued SENDs, or RECEIVEs
                     tcb.enterState(TransmissionControlBlock.State.CLOSED);
+
+                    // stop any outstanding RECEIVEs
+                    tcb.stopWaitingForDataToProcess();
+
                     return true;
                 case SYN_RECEIVED:
                     if(!sendIssued && !tcb.hasDataToTransmit()){
