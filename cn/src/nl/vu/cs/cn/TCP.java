@@ -368,6 +368,7 @@ public class TCP {
                             try {
                                 Log.v(TAG, "Sending: " + segment.toString());
                                 ip.ip_send(packet);
+                                tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                             } catch (IOException e) {
                                 Log.e(TAG, "Error while sending FIN", e);
                                 return false;
@@ -408,6 +409,7 @@ public class TCP {
                         try {
                             Log.v(TAG, "Sending: " + segment.toString());
                             ip.ip_send(packet);
+                            tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                         } catch (IOException e) {
                             Log.e(TAG, "Error while sending FIN", e);
                             return false;
@@ -439,6 +441,7 @@ public class TCP {
                     synchronized (tcb){
                         Segment segment = SegmentUtil.getFINPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
                         IP.Packet packet = IPUtil.getPacket(segment);
+                        tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                         try {
                             Log.v(TAG, "Sending: " + segment.toString());
                             ip.ip_send(packet);
@@ -460,7 +463,7 @@ public class TCP {
 
                     return true;
                 default:
-                    Log.w(TAG, "close(): connection was alraedy closing. Ignoring call");
+                    Log.w(TAG, "close(): connection was already closing. Ignoring call");
                     return true;
             }
         }

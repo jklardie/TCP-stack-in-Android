@@ -276,6 +276,10 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 break;
             case LAST_ACK:
                 // The only thing that can arrive in this state is an acknowledgment of our FIN.
+                if(SegmentUtil.inWindow(tcb.getSendUnacknowledged()+1, segment.getAck(), tcb.getSendNext()+1)){
+                    tcb.setSendUnacknowledged(segment.getAck());
+                    tcb.removeFromRetransmissionQueue(segment.getAck());
+                }
                 tcb.enterState(TransmissionControlBlock.State.CLOSED);
                 return false;
             case TIME_WAIT:
