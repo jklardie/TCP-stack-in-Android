@@ -67,7 +67,31 @@ public class TestBase extends TestCase {
                 TransmissionControlBlock.State.ESTABLISHED,
                 getClientState());
 
-        Thread.sleep(1000);
+        // Wait until server state changes from LISTEN to anything else
+        server.tcb.waitForStates(TransmissionControlBlock.State.ESTABLISHED,
+                TransmissionControlBlock.State.CLOSING,
+                TransmissionControlBlock.State.CLOSED,
+                TransmissionControlBlock.State.SYN_SENT,
+                TransmissionControlBlock.State.SYN_RECEIVED,
+                TransmissionControlBlock.State.FIN_WAIT_1,
+                TransmissionControlBlock.State.FIN_WAIT_2,
+                TransmissionControlBlock.State.LAST_ACK,
+                TransmissionControlBlock.State.CLOSE_WAIT,
+                TransmissionControlBlock.State.TIME_WAIT
+                );
+
+        if(getServerState() == TransmissionControlBlock.State.SYN_RECEIVED){
+            server.tcb.waitForStates(TransmissionControlBlock.State.ESTABLISHED,
+                    TransmissionControlBlock.State.CLOSING,
+                    TransmissionControlBlock.State.CLOSED,
+                    TransmissionControlBlock.State.SYN_SENT,
+                    TransmissionControlBlock.State.FIN_WAIT_1,
+                    TransmissionControlBlock.State.FIN_WAIT_2,
+                    TransmissionControlBlock.State.LAST_ACK,
+                    TransmissionControlBlock.State.CLOSE_WAIT,
+                    TransmissionControlBlock.State.TIME_WAIT
+            );
+        }
 
         assertEquals("Server should never return before reaching the ESTABLISHED state",
                 TransmissionControlBlock.State.ESTABLISHED,
