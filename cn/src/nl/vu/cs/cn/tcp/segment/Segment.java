@@ -375,9 +375,12 @@ public class Segment {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        sb.append("[src: ").append(IP.IpAddress.htoa(sourceAddr.getAddress())).append(":").append(sourcePort).append("] ");
+        sb.append("[dst: ").append(IP.IpAddress.htoa(destinationAddr.getAddress())).append(":").append(destinationPort).append("] ");
         sb.append(" | SEQ: ").append(seq);
         if(isAck) sb.append(" | ACK: ").append(ack);
         sb.append(" | ");
+        sb.append("checksum: ").append(checksum).append(" | ");
         if(isUrg) sb.append("URG, ");
         if(isAck) sb.append("ACK, ");
         if(isPsh) sb.append("PSH, ");
