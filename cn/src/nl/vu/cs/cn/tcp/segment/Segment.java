@@ -286,6 +286,10 @@ public class Segment {
         isFin = fin;
     }
 
+    public short getChecksum(){
+        return checksum;
+    }
+
     public boolean hasValidChecksum(){
         return validChecksum;
     }

@@ -1,87 +1,46 @@
 package nl.vu.cs.cn.checksum;
 
-
-import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
-
-import nl.vu.cs.cn.TestBase;
+import android.util.Log;
+import junit.framework.TestCase;
+import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.IPUtil;
+import nl.vu.cs.cn.tcp.ChecksumUtil;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
-import nl.vu.cs.cn.transmission.TestTransmit;
+import nl.vu.cs.cn.tcp.segment.Segment;
+import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 
-public class TestChecksum extends TestTransmit {
+import java.nio.ByteBuffer;
 
-    protected static final String[] MESSAGES = {
-            "This is the first message",
-            "Αυτό είναι το καλύτερο, προκλητική και πιο ευχάριστη Φυσικά ποτέ ακολούθησαν."};
+/**
+ * This class ...
+ *
+ * @author Jeffrey Klardie
+ */
+public class TestChecksum extends TestCase {
 
-    protected byte[][] data;
+    public void testChecksum() throws Exception {
+//        // TODO implement
+        IP ip = new IP(2);
+        TransmissionControlBlock tcb = new TransmissionControlBlock(ip, false);
+        IP.IpAddress srcAddr = IP.IpAddress.getAddress("192.168.0.2");
+        IP.IpAddress destAddr = IP.IpAddress.getAddress("192.168.0.1");
 
-    public TestChecksum(){
-        data = new byte[MESSAGES.length][];
-        int i = 0;
-        for(String msg : MESSAGES){
-            try {
-                data[i] = msg.getBytes("UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                data[i] = msg.getBytes();
-            }
-            i++;
+        tcb.setForeignSocketInfo(destAddr, (short)2048);
+        tcb.setLocalSocketInfo(srcAddr, (short)3110);
+
+        Segment synSegment = SegmentUtil.getSYNPacket(tcb, 1048261844);
+
+        byte[] packet = synSegment.encode();
+        String packetStr = "";
+        for(byte b : packet){
+            packetStr += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
         }
-    }
 
-    public void testReadWrite() throws Exception {
-        client.corruptFirstDataPacket(true);
+        Log.v("Packet", packetStr);
 
-        startServer(new ServerRunnable());
+        short expectedChecksum = (short) 37246;
 
-        connect();
+        assertEquals("Calculated checksum is different from expected checksum.", expectedChecksum, synSegment.getChecksum());
 
-        // first message should not be acked, and should return -1
-        int bytesSent = clientSocket.write(data[0], 0, data[0].length);
-        assertEquals("Expected all data to be sent", -1, bytesSent);
-
-        // second message should be sent normally
-        bytesSent = clientSocket.write(data[1], 0, data[1].length);
-        assertEquals("Expected all data to be sent", data[1].length, bytesSent);
-
-        // start close procedure
-        boolean closed = clientSocket.close();
-
-        // test client part
-        assertTrue("Expected clientSocket.close() to return true", closed);
-        assertEquals("Client should be in CLOSED state",
-                TransmissionControlBlock.State.CLOSED,
-                getClientState());
-
-        // test server part
-        assertEquals("Server should be in CLOSED state",
-                TransmissionControlBlock.State.CLOSED,
-                getServerState());
-    }
-
-    protected class ServerRunnable implements Runnable {
-
-        @Override
-        public void run() {
-            serverSocket.accept();
-
-            // the client will send two messages. The first one will be corrupted, and eventually dropped
-            // the server should only receive the last (second) message.
-            byte[] buf;
-            int bytesExpected = data[1].length;
-            buf = new byte[bytesExpected];
-            int bytesRead = serverSocket.read(buf, 0, data[1].length);
-
-            assertEquals(bytesExpected, bytesRead);
-            assertTrue("Expected to receive exact same data", Arrays.equals(data[1], buf));
-
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            serverSocket.close();
-        }
     }
 }
