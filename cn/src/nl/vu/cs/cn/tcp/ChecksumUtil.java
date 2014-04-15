@@ -12,7 +12,23 @@ public class ChecksumUtil {
     public static short calculateChecksum(ByteBuffer tcpPacketBuffer, IP.IpAddress srcAddr, IP.IpAddress destAddr, int tcpLength) {
         tcpPacketBuffer.flip();
         ByteBuffer pseudoHeader = getPseudoHeader(srcAddr, destAddr, tcpLength);
-        ByteBuffer packet = ByteBuffer.allocate(tcpLength + PSEUDO_HEADER_SIZE);
+
+        int totalLength = tcpLength + PSEUDO_HEADER_SIZE;
+        if(totalLength % 2 != 0){
+             /*
+                 odd number: if a segment contains an odd number of header and
+                 text octets to be checksummed, the last octet is padded on the
+                 right with zeros to form a 16 bit word for checksum purposes.
+                 The pad is not part of the segment.
+             */
+            totalLength += 1;
+        }
+
+        ByteBuffer packet = ByteBuffer.allocate(totalLength);
+
+        // make sure packet is completely empty
+        packet.put(new byte[totalLength]);
+        packet.clear();
 
         packet.put(pseudoHeader);
         packet.put(tcpPacketBuffer);
