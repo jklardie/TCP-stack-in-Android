@@ -2,6 +2,7 @@ package nl.vu.cs.cn.tcp;
 
 import java.nio.ByteBuffer;
 
+import android.util.Log;
 import nl.vu.cs.cn.IP;
 
 public class ChecksumUtil {
@@ -26,12 +27,15 @@ public class ChecksumUtil {
 
         ByteBuffer packet = ByteBuffer.allocate(totalLength);
 
-        // make sure packet is completely empty
-        packet.put(new byte[totalLength]);
-        packet.clear();
-
         packet.put(pseudoHeader);
         packet.put(tcpPacketBuffer);
+
+        StringBuffer sb = new StringBuffer();
+        for(byte b : packet.array()){
+            sb.append(String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0'));
+        }
+
+        Log.i("CHECKSUMCALC: ", sb.toString());
 
         return getOnesCompliment(packet);
     }
@@ -111,6 +115,8 @@ public class ChecksumUtil {
 
         // set combined TCP header and data length in bytes
         bb.putShort((short) tcpLength);
+
+        bb.clear();
 
         return bb;
     }
