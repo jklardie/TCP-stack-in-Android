@@ -384,7 +384,7 @@ public class Segment {
         sb.append(" | SEQ: ").append(seq);
         if(isAck) sb.append(" | ACK: ").append(ack);
         sb.append(" | ");
-        sb.append("checksum: ").append(checksum).append(" | ");
+        sb.append("checksum: ").append(Integer.toHexString(checksum)).append(" | ");
         if(isUrg) sb.append("URG, ");
         if(isAck) sb.append("ACK, ");
         if(isPsh) sb.append("PSH, ");
@@ -396,13 +396,6 @@ public class Segment {
         } catch (UnsupportedEncodingException e) {
             sb.append(" | [").append(new String(data)).append("]");
         }
-
-        sb.append(" ---- ");
-        byte[] packet = encode();
-        for(byte b : packet){
-            sb.append(String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0'));
-        }
-
 
         return sb.toString();
     }
