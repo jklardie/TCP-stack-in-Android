@@ -104,8 +104,8 @@ public class ChecksumUtil {
      */
     private static ByteBuffer getPseudoHeader(IP.IpAddress srcAddr, IP.IpAddress destAddr, int tcpLength) {
         ByteBuffer bb = ByteBuffer.allocate(PSEUDO_HEADER_SIZE);
-        bb.putInt(srcAddr.getAddress());
-        bb.putInt(destAddr.getAddress());
+        bb.putInt(swap(srcAddr.getAddress()));
+        bb.putInt(swap(destAddr.getAddress()));
 
         // add 1 byte of zero's
         bb.put((byte) 0);
@@ -119,6 +119,20 @@ public class ChecksumUtil {
         bb.clear();
 
         return bb;
+    }
+
+    /**
+     * Swap endiannes of integer value
+     * @param value
+     * @return
+     */
+    private static int swap(int value){
+        int b1 = (value >>  0) & 0xff;
+        int b2 = (value >>  8) & 0xff;
+        int b3 = (value >> 16) & 0xff;
+        int b4 = (value >> 24) & 0xff;
+
+        return b1 << 24 | b2 << 16 | b3 << 8 | b4 << 0;
     }
 
 }
