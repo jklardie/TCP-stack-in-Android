@@ -1,6 +1,7 @@
 package nl.vu.cs.cn.tcp.segment;
 
 
+import android.util.Log;
 import nl.vu.cs.cn.IP;
 
 public class SegmentReceiver {
@@ -41,6 +42,7 @@ public class SegmentReceiver {
                             }
                         } catch (Exception e) {
                             packet.data = null;
+                            Log.w("SegmentRecvr", "Exception in ip_receive_timeout()", e);
                         }
                     }
                 }
