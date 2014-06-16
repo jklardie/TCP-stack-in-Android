@@ -8,21 +8,26 @@ import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public class TestCloseSimultaneous extends TestBase {
 
-    private CountDownLatch latch;
+    private CountDownLatch synLatch;
+    private CountDownLatch closeLatch;
 
     public void testClose() throws Exception {
-        latch = new CountDownLatch(2);
+        synLatch = new CountDownLatch(2);
+        closeLatch = new CountDownLatch(2);
 
         startServer(new ServerRunnable());
 
         connect();
+
+        // synchronize client and server so they both finish connect at the same time
+        synLatch.countDown();
 
         // set ip packet latency to 1s so we can perform the simultaneous close
         client.setIPSendLatency(3000);
         server.setIPSendLatency(3000);
 
         // synchronize client and server so they both close at the same time
-        latch.countDown();
+        closeLatch.countDown();
 
         // start close procedure
         boolean closed = clientSocket.close();
@@ -48,12 +53,15 @@ public class TestCloseSimultaneous extends TestBase {
         public void run() {
             serverSocket.accept();
 
+            // synchronize client and server so they both finish connect at the same time
+            synLatch.countDown();
+
             // set ip packet latency to 1s so we can perform the simultaneous close
             client.setIPSendLatency(3000);
             server.setIPSendLatency(3000);
 
             // synchronize client and server so they both close at the same time
-            latch.countDown();
+            closeLatch.countDown();
 
             serverSocket.close();
         }

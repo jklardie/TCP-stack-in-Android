@@ -1,15 +1,10 @@
 package nl.vu.cs.cn.checksum;
 
-import android.util.Log;
 import junit.framework.TestCase;
 import nl.vu.cs.cn.IP;
-import nl.vu.cs.cn.IPUtil;
-import nl.vu.cs.cn.tcp.ChecksumUtil;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.Segment;
 import nl.vu.cs.cn.tcp.segment.SegmentUtil;
-
-import java.nio.ByteBuffer;
 
 /**
  * This class ...
@@ -31,16 +26,13 @@ public class TestChecksum extends TestCase {
         Segment synSegment = SegmentUtil.getSYNPacket(tcb, 1048261844);
 
         byte[] packet = synSegment.encode();
-        String packetStr = "";
-        for(byte b : packet){
-            packetStr += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
-        }
-
-        Log.v("Packet", packetStr);
 
         short expectedChecksum = (short) 37246;
 
-        assertEquals("Calculated checksum is different from expected checksum.", expectedChecksum, synSegment.getChecksum());
+        assertEquals("Calculated checksum is different from expected checksum.", Integer.toHexString(expectedChecksum),
+                Integer.toHexString(synSegment.getChecksum()));
 
     }
+
+
 }
