@@ -27,7 +27,7 @@ public class TestChecksum extends TestCase {
 
         byte[] packet = synSegment.encode();
 
-        short expectedChecksum = (short) 37246;
+        short expectedChecksum = (short) 34597;
 
         assertEquals("Calculated checksum is different from expected checksum.", Integer.toHexString(expectedChecksum),
                 Integer.toHexString(synSegment.getChecksum()));

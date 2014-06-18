@@ -54,15 +54,13 @@ public class SegmentHandler implements OnSegmentArriveListener {
                         try {
                             Log.v(TAG, "Sending: " + outSegment.toString());
                             ip.ip_send(packet);
-                            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
                         } catch (IOException e) {
-                            Log.e(TAG, "Error while sending ACK", e);
-                            // TODO: howto handle this? For now just ignore
+                            Log.e(TAG, "Error while sending ACK. Will be retransmitted...", e);
                         }
+                        // ACKs don't have to be retransmitted
+//                        tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
 
                         return;
-                    } else {
-                        // TODO: ??
                     }
 
                     // second check the RST bit (not supported by this implementation)
@@ -72,6 +70,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     if(segment.isSyn()){
                         // This is an error, and should responed with RESET (however that's not supported)
                         Log.e(TAG, "onSegmentArrive(): unexpected SYN segment. Ignoring");
+                        tcb.enterState(TransmissionControlBlock.State.CLOSED);
                         return;
                     }
 
@@ -129,13 +128,10 @@ public class SegmentHandler implements OnSegmentArriveListener {
             try {
                 Log.v(TAG, "Sending: " + outSegment.toString());
                 ip.ip_send(packet);
-                tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
             } catch (IOException e) {
-                Log.e(TAG, "Error while sending SYN ACK", e);
-
-                // TODO: howto handle this?
-                return;
+                Log.e(TAG, "Error while sending SYN ACK. Will be retried later...", e);
             }
+            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
 
             tcb.setSendNext(iss + segment.getLen());
 
@@ -200,20 +196,26 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 try {
                     Log.v(TAG, "Sending: " + outSegment.toString());
                     ip.ip_send(packet);
-                    tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
-                    tcb.advanceSendNext(outSegment.getLen());
                 } catch (IOException e) {
-                    Log.e(TAG, "Error while sending SYN ACK", e);
-
-                    // TODO: howto handle this?
-                    return;
+                    Log.e(TAG, "Error while sending ACK.. will be retried", e);
                 }
+                // ACK does not have to be retransmitted
+//                tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+                tcb.advanceSendNext(outSegment.getLen());
 
             } else {
                 tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
-                // TODO: send SYN ACK segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
-                // TODO If there are other controls or text in the segment, queue them for
-                // processing after the ESTABLISHED state has been reached
+
+                // Send SYN ACK segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
+                Segment outSegment = SegmentUtil.getSYNACKPacket(tcb, tcb.getInitialSendSequenceNumber(), tcb.getReceiveNext());
+                IP.Packet packet = IPUtil.getPacket(outSegment);
+                try {
+                    Log.v(TAG, "Sending: " + outSegment.toString());
+                    ip.ip_send(packet);
+                } catch (IOException e) {
+                    Log.e(TAG, "Error while sending SYN ACK.. will be retried", e);
+                }
+                tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
             }
         } else {
             Log.w(TAG, "onSegmentArrive(): excepted SYN-ACK in SYN SENT state. Missing SYN. Ignoring");
@@ -230,17 +232,20 @@ public class SegmentHandler implements OnSegmentArriveListener {
         switch (tcb.getState()) {
             case SYN_RECEIVED:
                 if(SegmentUtil.inWindow(tcb.getSendUnacknowledged(), segment.getAck(), tcb.getSendNext()+1)){
+                    Log.d(TAG, "Change state from SYN_RECEIVED to ESTABLISHED. Should continue processing");
                     tcb.enterState(TransmissionControlBlock.State.ESTABLISHED);
                 } else {
                     // RESET should be send, not supported though.
                     // This should never happen as we already check ACK validity earlier
-                    return true;
+                    Log.v(TAG, "onSegmentArrive(): state SYN_RECEIVED, received unacceptable ACK. Dropping segment.");
+                    return false;
                 }
             case ESTABLISHED:
             case FIN_WAIT_1:
             case FIN_WAIT_2:
             case CLOSE_WAIT:
             case CLOSING:
+                Log.d(TAG, "Continuing processing!!!");
                 if(SegmentUtil.inWindow(tcb.getSendUnacknowledged()+1, segment.getAck(), tcb.getSendNext()+1)){
                     tcb.setSendUnacknowledged(segment.getAck());
                     tcb.removeFromRetransmissionQueue(segment.getAck());
@@ -250,6 +255,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     Log.v(TAG, "onSegmentArrive(): duplicate ACK received. Ignoring");
                 } else if(SegmentUtil.inWindow(tcb.getSendNext()+1, segment.getAck(), tcb.getSendNext()+tcb.getSendWindow())){
                     Log.v(TAG, "onSegmentArrive(): ACK acks non-sent seq num. Dropping segment");
+
                     // TODO: send ACK
                     return false;
                 }
@@ -315,11 +321,11 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 try {
                     Log.v(TAG, "Sending: " + outSegment.toString());
                     ip.ip_send(packet);
-                    tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
                 } catch (IOException e) {
                     Log.e(TAG, "Error while sending ACK", e);
-                    // TODO: howto handle this? For now just ignore
                 }
+                // ACK does not have to be retransmitted
+//                tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
 
                 return;
             case CLOSE_WAIT:
@@ -360,12 +366,12 @@ public class SegmentHandler implements OnSegmentArriveListener {
         try {
             Log.v(TAG, "Sending: " + outSegment.toString());
             ip.ip_send(packet);
-            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
-            tcb.advanceSendNext(outSegment.getLen());
         } catch (IOException e) {
             Log.e(TAG, "Error while sending ACK for FIN", e);
-            // TODO: howto handle this? For now let other party send FIN again (they did not get the ACK)
         }
+        // ACK does not have to be retransmitted
+//        tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+        tcb.advanceSendNext(outSegment.getLen());
 
         switch(tcb.getState()){
             case SYN_RECEIVED:

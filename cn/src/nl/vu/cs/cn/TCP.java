@@ -129,7 +129,6 @@ public class TCP {
                             ip.ip_send(packet);
                             tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
                         } catch (IOException e) {
-                            // TODO: howto handle this? For now just ignore
                             Log.e(TAG, "Error while sending data", e);
                             return -1;
                         }

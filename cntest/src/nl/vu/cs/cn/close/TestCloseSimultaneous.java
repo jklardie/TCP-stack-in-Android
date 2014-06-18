@@ -23,8 +23,8 @@ public class TestCloseSimultaneous extends TestBase {
         synLatch.countDown();
 
         // set ip packet latency to 1s so we can perform the simultaneous close
-        client.setIPSendLatency(3000);
-        server.setIPSendLatency(3000);
+        client.setIPSendLatency(1000);
+        server.setIPSendLatency(1000);
 
         // synchronize client and server so they both close at the same time
         closeLatch.countDown();
@@ -57,8 +57,8 @@ public class TestCloseSimultaneous extends TestBase {
             synLatch.countDown();
 
             // set ip packet latency to 1s so we can perform the simultaneous close
-            client.setIPSendLatency(3000);
-            server.setIPSendLatency(3000);
+            client.setIPSendLatency(1000);
+            server.setIPSendLatency(1000);
 
             // synchronize client and server so they both close at the same time
             closeLatch.countDown();
