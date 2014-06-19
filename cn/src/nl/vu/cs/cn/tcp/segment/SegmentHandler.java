@@ -250,13 +250,22 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     tcb.setSendUnacknowledged(segment.getAck());
                     tcb.removeFromRetransmissionQueue(segment.getAck());
 
-                    // TODO: normally window size would be updated here. However, that is not supported in this implementation
+                    // normally window size would be updated here. However, that is not supported in this implementation
                 } else if(SegmentUtil.inWindow(tcb.getSendUnacknowledged()-tcb.getSendWindow(), segment.getAck(), tcb.getSendUnacknowledged())){
                     Log.v(TAG, "onSegmentArrive(): duplicate ACK received. Ignoring");
                 } else if(SegmentUtil.inWindow(tcb.getSendNext()+1, segment.getAck(), tcb.getSendNext()+tcb.getSendWindow())){
                     Log.v(TAG, "onSegmentArrive(): ACK acks non-sent seq num. Dropping segment");
 
-                    // TODO: send ACK
+                    // send ACK <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+                    Segment outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
+                    IP.Packet packet = IPUtil.getPacket(outSegment);
+                    try {
+                        Log.v(TAG, "Sending: " + outSegment.toString());
+                        ip.ip_send(packet);
+                    } catch (IOException e) {
+                        Log.e(TAG, "Error while sending ACK. Will be retransmitted...", e);
+                    }
+
                     return false;
                 }
 
@@ -418,10 +427,11 @@ public class SegmentHandler implements OnSegmentArriveListener {
         if(tcb.getReceiveWindow() == 0){
             // If the RCV.WND is zero, no segments will be acceptable, except valid ACKs, URGs and RSTs.
             return segment.getLen() == 0 && segment.getSeq() == tcb.getReceiveNext();
+        } else if (segment.getLen() == 0) {
+            return SegmentUtil.inWindow(tcb.getReceiveNext(), segment.getSeq(), tcb.getReceiveNext() + tcb.getReceiveWindow());
         } else {
-            long left = tcb.getReceiveNext();
-            long right = tcb.getReceiveNext() + tcb.getReceiveWindow();
-            return SegmentUtil.overlap(left, right, segment.getSeq(), segment.getLastSeq());
+            return SegmentUtil.inWindow(tcb.getReceiveNext(), segment.getSeq(), tcb.getReceiveNext() + tcb.getReceiveWindow())
+                    || SegmentUtil.inWindow(tcb.getReceiveNext(), segment.getSeq() + segment.getLen()-1, tcb.getReceiveNext());
         }
     }
 
