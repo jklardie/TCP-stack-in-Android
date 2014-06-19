@@ -1,12 +1,12 @@
 package nl.vu.cs.cn.close;
 
 
-import java.util.concurrent.CountDownLatch;
-
 import nl.vu.cs.cn.TestBase;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
-public class TestCloseSimultaneous extends TestBase {
+import java.util.concurrent.CountDownLatch;
+
+public class TestCloseSimultaneousUneven extends TestBase {
 
     private CountDownLatch synLatch;
     private CountDownLatch closeLatch;
@@ -68,6 +68,11 @@ public class TestCloseSimultaneous extends TestBase {
                 e.printStackTrace();
             }
             closeLatch.countDown();
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
             serverSocket.close();
         }
