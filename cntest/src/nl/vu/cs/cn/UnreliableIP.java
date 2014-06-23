@@ -29,7 +29,9 @@ public class UnreliableIP extends IP {
 
     private double dropSYNRate, dropSYNACKRate, dropACKRate, dropFINRate;
     private long sendLatencyMs;
-    private boolean corruptFirstDataPacket;
+    private boolean corruptFirstDataPacket, corruptFirstAck, corruptFirstSyn, corruptFirstSynAck;
+    private boolean corruptAllAck, corruptAllSyn, corruptAllSynAck;
+    private boolean corruptedAck, corruptedSyn, corruptedSynAck;
     private long corruptedDataSeq = -1;
 
     public UnreliableIP(int address) throws IOException {
@@ -72,6 +74,24 @@ public class UnreliableIP extends IP {
     protected void corruptFirstDataPacket(boolean corrupt){
         corruptFirstDataPacket = corrupt;
     }
+    protected void corruptFirstAck(boolean corrupt){
+        corruptFirstAck = corrupt;
+    }
+    protected void corruptFirstSyn(boolean corrupt){
+        corruptFirstSyn = corrupt;
+    }
+    protected void corruptFirstSynAck(boolean corrupt){
+        corruptFirstSynAck = corrupt;
+    }
+    protected void corruptAllAck(boolean corrupt){
+        corruptAllAck = corrupt;
+    }
+    protected void corruptAllSyn(boolean corrupt){
+        corruptAllSyn = corrupt;
+    }
+    protected void corruptAllSynAck(boolean corrupt){
+        corruptAllSynAck = corrupt;
+    }
 
     @Override
     public int ip_send(Packet p) throws IOException {
@@ -112,15 +132,51 @@ public class UnreliableIP extends IP {
 
         } else if(segment.isFin() && (dropFINType == DropType.ALL ||
                 (dropFINType == DropType.FIRST && !droppedFIN) ||
-                (dropFINType == DropType.RANDOM && rand.nextDouble() < dropFINRate))){
+                (dropFINType == DropType.RANDOM && rand.nextDouble() < dropFINRate))) {
 
             Log.i(TestBase.TAG, "Dropping FIN segment: " + segment.toString());
             droppedFIN = true;
             return dataClone.length;
+        } else if(segment.isAck() && ((corruptFirstAck && !corruptedAck) || corruptAllAck)){
+            // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
+            byte[] corruptData = new byte[10];
+            rand.nextBytes(corruptData);
+
+            int dataOffset = Segment.HEADER_SIZE / 2;
+            System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
+
+            corruptedAck = true;
+
+            Log.i(TestBase.TAG, "Corrupting ack: " + segment.toString());
+
+        } else if(segment.isSyn() && ((corruptFirstSyn && !corruptedSyn) || corruptAllSyn)){
+            // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
+            byte[] corruptData = new byte[10];
+            rand.nextBytes(corruptData);
+
+            int dataOffset = Segment.HEADER_SIZE / 2;
+            System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
+
+            corruptedSyn = true;
+
+            Log.i(TestBase.TAG, "Corrupting ack: " + segment.toString());
+
+        } else if(segment.isSyn() && segment.isAck() && ((corruptFirstSynAck && !corruptedSynAck) || corruptAllSynAck)){
+            // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
+            byte[] corruptData = new byte[10];
+            rand.nextBytes(corruptData);
+
+            int dataOffset = Segment.HEADER_SIZE / 2;
+            System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
+
+            corruptedSynAck = true;
+
+            Log.i(TestBase.TAG, "Corrupting ack: " + segment.toString());
 
         } else if(segment.getDataLength() > 0 && !segment.isFin() && !segment.isSyn()){
             if(corruptFirstDataPacket && (corruptedDataSeq == -1 || corruptedDataSeq == segment.getSeq())){
                 // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
+
                 byte[] corruptData = new byte[segment.getDataLength()];
                 rand.nextBytes(corruptData);
 

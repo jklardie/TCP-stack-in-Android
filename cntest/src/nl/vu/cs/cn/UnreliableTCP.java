@@ -38,4 +38,28 @@ public class UnreliableTCP extends TCP {
     public void corruptFirstDataPacket(boolean corrupt){
         unreliableIP.corruptFirstDataPacket(corrupt);
     }
+
+    public void corruptFirstAck(boolean corrupt){
+        unreliableIP.corruptFirstAck(corrupt);
+    }
+
+    public void corruptFirstSyn(boolean corrupt){
+        unreliableIP.corruptFirstSyn(corrupt);
+    }
+
+    public void corruptFirstSynAck(boolean corrupt){
+        unreliableIP.corruptFirstSynAck(corrupt);
+    }
+    
+    public void corruptAllAck(boolean corrupt){
+        unreliableIP.corruptAllAck(corrupt);
+    }
+
+    public void corruptAllSyn(boolean corrupt){
+        unreliableIP.corruptAllSyn(corrupt);
+    }
+
+    public void corruptAllSynAck(boolean corrupt){
+        unreliableIP.corruptAllSynAck(corrupt);
+    }
 }
