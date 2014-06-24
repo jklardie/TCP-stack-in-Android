@@ -89,7 +89,7 @@ public class UnreliableIPStack extends IP {
                 switch(setting.action){
                     case DROP:
                         Log.w(TAG, "Dropping outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
-                        return dataClone.length;
+                        return -1;
                     case CORRUPT:
                         Log.w(TAG, "Corrupting outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
 
@@ -147,6 +147,7 @@ public class UnreliableIPStack extends IP {
                     case DROP:
                         Log.w(TAG, "Dropping incoming " + setting.type + " segment. SEQ: " + segment.getSeq());
                         p.data = null;
+                        break;
                     case CORRUPT:
                         Log.w(TAG, "Corrupting incoming " + setting.type + " segment. SEQ: " + segment.getSeq());
 

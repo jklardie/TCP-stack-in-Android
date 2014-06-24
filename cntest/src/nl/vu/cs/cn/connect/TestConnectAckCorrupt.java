@@ -3,40 +3,40 @@ package nl.vu.cs.cn.connect;
 import nl.vu.cs.cn.UnreliableIPStack;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
-public class TestConnectAckLoss extends TestConnect {
+public class TestConnectAckCorrupt extends TestConnect {
 
-    public void testDropFirstACKOutgoing() throws Exception {
-        client.dropOutgoing(UnreliableIPStack.Type.ACK, 1);
+    public void testCorruptFirstACKOutgoing() throws Exception {
+        client.corruptOutgoing(UnreliableIPStack.Type.ACK, 1);
         doNormalConnectionTest();
     }
 
-    public void testDropFirstACKIncoming() throws Exception {
-        server.dropIncoming(UnreliableIPStack.Type.ACK, 1);
+    public void testCorruptFirstACKIncoming() throws Exception {
+        server.corruptIncoming(UnreliableIPStack.Type.ACK, 1);
         doNormalConnectionTest();
     }
 
-    public void testDropHalfACKOutgoing() throws Exception {
-        client.dropOutgoing(UnreliableIPStack.Type.ACK, 5);
+    public void testCorruptHalfACKOutgoing() throws Exception {
+        client.corruptOutgoing(UnreliableIPStack.Type.ACK, 5);
         doNormalConnectionTest();
     }
 
-    public void testDropHalfACKIncoming() throws Exception {
-        server.dropIncoming(UnreliableIPStack.Type.ACK, 5);
+    public void testCorruptHalfACKIncoming() throws Exception {
+        server.corruptIncoming(UnreliableIPStack.Type.ACK, 5);
         doNormalConnectionTest();
     }
 
-    public void testDropAllACKOutgoing() throws Exception {
-        client.dropOutgoing(UnreliableIPStack.Type.ACK);
-        doDropAllACKTest();
+    public void testCorruptAllACKOutgoing() throws Exception {
+        client.corruptOutgoing(UnreliableIPStack.Type.ACK);
+        doCorruptAllACKTest();
     }
 
-    public void testDropAllACKIncoming() throws Exception {
-        server.dropIncoming(UnreliableIPStack.Type.ACK);
-        doDropAllACKTest();
+    public void testCorruptAllACKIncoming() throws Exception {
+        server.corruptIncoming(UnreliableIPStack.Type.ACK);
+        doCorruptAllACKTest();
     }
 
-    private void doDropAllACKTest() throws Exception {
-        // even when all ACKs are dropped, the client will think the connection is established.
+    private void doCorruptAllACKTest() throws Exception {
+        // even when all ACKs are corruptped, the client will think the connection is established.
         startServer(new ServerRunnable());
 
         boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);
