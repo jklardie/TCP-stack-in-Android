@@ -1,19 +1,44 @@
 package nl.vu.cs.cn.connect;
 
-import nl.vu.cs.cn.UnreliableIP;
+import nl.vu.cs.cn.UnreliableIPStack;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public class TestConnectAckLoss extends TestConnectSegmentLoss {
 
-    public void testDropFirstACK() throws Exception {
-        client.dropACK(UnreliableIP.DropType.FIRST);
-
-        performTestDropFirst();
+    public void testDropFirstACKOutgoing() throws Exception {
+        client.dropOutgoing(UnreliableIPStack.Type.ACK, 1);
+        performTestSuccess();
     }
 
-    public void testDropAllACK() throws Exception {
-        client.dropACK(UnreliableIP.DropType.ALL);
+    public void testDropFirstACKIncoming() throws Exception {
+        server.dropIncoming(UnreliableIPStack.Type.ACK, 1);
+        performTestSuccess();
+    }
 
+    public void testDropHalfACKOutgoing() throws Exception {
+        client.dropOutgoing(UnreliableIPStack.Type.ACK, 5);
+        performTestSuccess();
+    }
+
+    public void testDropHalfACKIncoming() throws Exception {
+        server.dropIncoming(UnreliableIPStack.Type.ACK, 5);
+        performTestSuccess();
+    }
+
+    public void testDropAllACKOutgoing() throws Exception {
+        client.dropOutgoing(UnreliableIPStack.Type.ACK);
+
+        doDropAllACKTest();
+    }
+
+    public void testDropAllACKIncoming() throws Exception {
+        server.dropIncoming(UnreliableIPStack.Type.ACK);
+
+        doDropAllACKTest();
+    }
+
+    private void doDropAllACKTest() throws Exception {
+        // even when all ACKs are dropped, the client will think the connection is established.
         startServer(new ServerRunnable());
 
         boolean connected = clientSocket.connect(SERVER_IP_ADDR, SERVER_PORT);

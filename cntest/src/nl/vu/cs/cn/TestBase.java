@@ -5,7 +5,6 @@ import android.util.Log;
 import junit.framework.TestCase;
 
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
-import nl.vu.cs.cn.tcp.segment.SegmentReceiver;
 
 
 public class TestBase extends TestCase {
@@ -18,15 +17,24 @@ public class TestBase extends TestCase {
     protected static final int SERVER_PORT = 123;
     protected static final IP.IpAddress SERVER_IP_ADDR = IP.IpAddress.getAddress("192.168.0." + SERVER_ADDR_LAST_OCTET);
 
-    protected UnreliableTCP client;
-    protected UnreliableTCP server;
+    protected UnreliableTCPStack client;
+    protected UnreliableTCPStack server;
     protected TCP.Socket clientSocket;
     protected TCP.Socket serverSocket;
 
     @Override
     protected void setUp() throws Exception {
-        client = new UnreliableTCP(CLIENT_ADDR_LAST_OCTET);
-        server = new UnreliableTCP(SERVER_ADDR_LAST_OCTET);
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
+
+        client = new UnreliableTCPStack(CLIENT_ADDR_LAST_OCTET);
+        server = new UnreliableTCPStack(SERVER_ADDR_LAST_OCTET);
+
+        client.reset();
+        server.reset();
 
         clientSocket = client.socket();
         serverSocket = server.socket(SERVER_PORT);
@@ -46,6 +54,12 @@ public class TestBase extends TestCase {
         } catch (NullPointerException e){}
 
         super.tearDown();
+
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
+        Log.i(TAG, "-----------------------------");
     }
 
     protected void clearRetransmissionQueues() throws Exception {

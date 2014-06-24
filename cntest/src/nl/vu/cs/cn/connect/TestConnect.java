@@ -6,12 +6,6 @@ import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public class TestConnect extends TestBase {
 
-    public void testConnect() throws Exception {
-        startServer(new ServerRunnable());
-
-        connect();
-    }
-
     protected class ServerRunnable implements Runnable {
 
         @Override

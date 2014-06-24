@@ -17,10 +17,12 @@ public class UnreliableIP extends IP {
         NONE,
         FIRST,
         ALL,
+        FIRST_HALF,
         RANDOM
     }
 
     private boolean droppedSYN, droppedSYNACK, droppedACK, droppedFIN;
+    private int numDroppedSYN, numDroppedSYNACK, numDroppedAck, numDroppedFIN;
 
     private DropType dropSYNType = DropType.NONE;
     private DropType dropSYNACKType = DropType.NONE;
@@ -108,47 +110,33 @@ public class UnreliableIP extends IP {
         // or we continue, and send the packet normally (at the end of this method).
         if((segment.isAck() && segment.isSyn()) && (dropSYNACKType == DropType.ALL ||
                 (dropSYNACKType == DropType.FIRST && !droppedSYNACK) ||
+                (dropSYNACKType == DropType.FIRST_HALF && numDroppedSYNACK < 5) ||
                 (dropSYNACKType == DropType.RANDOM && rand.nextDouble() < dropSYNACKRate))){
 
             Log.i(TestBase.TAG, "Dropping SYN, ACK segment: " + segment.toString());
             droppedSYNACK = true;
+            numDroppedSYNACK += 1;
             return dataClone.length;
 
         } else if(segment.isSyn() && (dropSYNType == DropType.ALL ||
                 (dropSYNType == DropType.FIRST && !droppedSYN) ||
+                (dropSYNType == DropType.FIRST_HALF && numDroppedSYN < 5) ||
                 (dropSYNType == DropType.RANDOM && rand.nextDouble() < dropSYNRate))){
 
             Log.i(TestBase.TAG, "Dropping SYN segment: " + segment.toString());
             droppedSYN = true;
-            return dataClone.length;
-
-        } else if(segment.isAck() && (dropACKType == DropType.ALL ||
-                (dropACKType == DropType.FIRST && !droppedACK) ||
-                (dropACKType == DropType.RANDOM && rand.nextDouble() < dropACKRate))){
-
-            Log.i(TestBase.TAG, "Dropping ACK segment: " + segment.toString());
-            droppedACK = true;
+            numDroppedSYN += 1;
             return dataClone.length;
 
         } else if(segment.isFin() && (dropFINType == DropType.ALL ||
                 (dropFINType == DropType.FIRST && !droppedFIN) ||
+                (dropFINType == DropType.FIRST_HALF && numDroppedFIN < 5) ||
                 (dropFINType == DropType.RANDOM && rand.nextDouble() < dropFINRate))) {
 
             Log.i(TestBase.TAG, "Dropping FIN segment: " + segment.toString());
             droppedFIN = true;
+            numDroppedFIN += 1;
             return dataClone.length;
-        } else if(segment.isAck() && ((corruptFirstAck && !corruptedAck) || corruptAllAck)){
-            // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
-            byte[] corruptData = new byte[10];
-            rand.nextBytes(corruptData);
-
-            int dataOffset = Segment.HEADER_SIZE / 2;
-            System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
-
-            corruptedAck = true;
-
-            Log.i(TestBase.TAG, "Corrupting ack: " + segment.toString());
-
         } else if(segment.isSyn() && ((corruptFirstSyn && !corruptedSyn) || corruptAllSyn)){
             // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
             byte[] corruptData = new byte[10];
@@ -187,6 +175,28 @@ public class UnreliableIP extends IP {
 
                 Log.i(TestBase.TAG, "Corrupting data segment: " + segment.toString());
             }
+        } else if(segment.isAck() && (dropACKType == DropType.ALL ||
+                (dropACKType == DropType.FIRST && !droppedACK) ||
+                (dropACKType == DropType.FIRST_HALF && numDroppedAck < 5) ||
+                (dropACKType == DropType.RANDOM && rand.nextDouble() < dropACKRate))){
+
+            Log.i(TestBase.TAG, "Dropping ACK segment: " + segment.toString());
+            droppedACK = true;
+            numDroppedAck += 1;
+            return dataClone.length;
+
+        } else if(segment.isAck() && ((corruptFirstAck && !corruptedAck) || corruptAllAck)){
+            // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
+            byte[] corruptData = new byte[10];
+            rand.nextBytes(corruptData);
+
+            int dataOffset = Segment.HEADER_SIZE / 2;
+            System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
+
+            corruptedAck = true;
+
+            Log.i(TestBase.TAG, "Corrupting ack: " + segment.toString());
+
         }
 
         if(sendLatencyMs > 0){
