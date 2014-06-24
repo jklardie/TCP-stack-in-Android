@@ -38,6 +38,7 @@ public class SegmentReceiver {
                             ip.ip_receive_timeout(packet, RECEIVE_TIMEOUT);
                             if(packet.data != null){
                                 Segment segment = new Segment(packet.data, packet.source, packet.destination);
+                                Log.d("SegmentRecvr", "Received segment!!!");
                                 listener.onSegmentArrive(segment);
                             }
                         } catch (Exception e) {

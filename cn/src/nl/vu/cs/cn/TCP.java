@@ -123,31 +123,30 @@ public class TCP {
                         dataLeft -= writtenData;
                         totalWrittenData += writtenData;
 
+                        // send data packet
                         IP.Packet packet = IPUtil.getPacket(outSegment);
                         try {
                             Log.v(TAG, "Sending: " + outSegment.toString());
                             ip.ip_send(packet);
-                            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
                         } catch (IOException e) {
                             Log.e(TAG, "Error while sending data", e);
-                            return -1;
+                        } finally {
+                            tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+                            sendIssued = true;
                         }
 
                         tcb.advanceSendNext(outSegment.getLen());
                     }
 
+                    boolean acknowledged = tcb.waitForAck(outSegment);
+                    if (!acknowledged) {
+                        Log.w(TAG, "Segment not acknowledged. Was waiting for " + outSegment.getLastSeq() + ", but got " + tcb.getSendUnacknowledged());
+                        return -1;
+                    }
+
                 } while (dataLeft > 0);
 
-                sendIssued = true;
-
-                // wait until all segments have been acknowledged
-                boolean acknowledged = tcb.waitForAck(outSegment);
-
-                if (!acknowledged) {
-                    Log.w(TAG, "Segment not acknowledged. Was waiting for " + outSegment.getLastSeq() + ", but got " + tcb.getSendUnacknowledged());
-                }
-
-                return (acknowledged) ? totalWrittenData : -1;
+                return totalWrittenData;
             default:
                 Log.e(TAG, "Error in send(): connection closing");
                 return -1;
@@ -276,13 +275,12 @@ public class TCP {
                     ip.ip_send(packet);
                 } catch (IOException e) {
                     Log.e(TAG, "Error while sending SYN", e);
-                    return false;
+                } finally {
+                    tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                 }
 
-                tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
-
                 tcb.setSendUnacknowledged(iss);
-                tcb.setSendNext(iss+segment.getLen());
+                tcb.setSendNext(iss + segment.getLen());
 
                 tcb.enterState(TransmissionControlBlock.State.SYN_SENT);
             }
@@ -366,10 +364,10 @@ public class TCP {
                             try {
                                 Log.v(TAG, "Sending: " + segment.toString());
                                 ip.ip_send(packet);
-                                tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                             } catch (IOException e) {
                                 Log.e(TAG, "Error while sending FIN", e);
-                                return false;
+                            } finally {
+                                tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                             }
 
                             tcb.setSendUnacknowledged(segment.getSeq());
@@ -378,6 +376,10 @@ public class TCP {
                             tcb.enterState(TransmissionControlBlock.State.FIN_WAIT_1);
                             tcb.setUnacknowledgedFin(segment);
                         }
+
+                        Log.v(TAG, "close(): waiting until state becomes CLOSED");
+                        tcb.waitForStates(TransmissionControlBlock.State.CLOSED);
+
                         return true;
                     } else {
                         // Queue close for processing after entering ESTABLISHED state
@@ -407,10 +409,10 @@ public class TCP {
                         try {
                             Log.v(TAG, "Sending: " + segment.toString());
                             ip.ip_send(packet);
-                            tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                         } catch (IOException e) {
                             Log.e(TAG, "Error while sending FIN", e);
-                            return false;
+                        } finally {
+                            tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                         }
 
                         tcb.setSendUnacknowledged(segment.getSeq());
@@ -439,13 +441,13 @@ public class TCP {
                     synchronized (tcb){
                         Segment segment = SegmentUtil.getFINPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
                         IP.Packet packet = IPUtil.getPacket(segment);
-                        tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                         try {
                             Log.v(TAG, "Sending: " + segment.toString());
                             ip.ip_send(packet);
                         } catch (IOException e) {
                             Log.e(TAG, "Error while sending FIN", e);
-                            return false;
+                        } finally {
+                            tcb.addToRetransmissionQueue(new RetransmissionSegment(segment));
                         }
 
                         tcb.setSendUnacknowledged(segment.getSeq());
