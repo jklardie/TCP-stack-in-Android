@@ -51,8 +51,8 @@ public class TestBase extends TestCase {
     protected void clearRetransmissionQueues() throws Exception {
         // make sure all retransmission tasks are cleared (so other tests can start fresh)
         try {
-            client.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
-            server.tcb.removeFromRetransmissionQueue(Integer.MAX_VALUE);
+            client.tcb.clearRetransmissionQueue();
+            server.tcb.clearRetransmissionQueue();
         } catch (Exception e) {
             // NullPointerException
         }

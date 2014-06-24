@@ -14,7 +14,6 @@ import nl.vu.cs.cn.tcp.segment.SegmentUtil;
 public class TestChecksum extends TestCase {
 
     public void testChecksum() throws Exception {
-//        // TODO implement
         IP ip = new IP(2);
         TransmissionControlBlock tcb = new TransmissionControlBlock(ip, false);
         IP.IpAddress srcAddr = IP.IpAddress.getAddress("192.168.0.2");

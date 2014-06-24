@@ -563,6 +563,14 @@ public class TransmissionControlBlock {
     ////////////////////////
 
     /**
+     * Clear the retransmission queue so nothing is retransmitted anymore. Should only
+     * be called when entering the TIME_WAIT state.
+     */
+    public void clearRetransmissionQueue(){
+        retransmissionMap.clear();
+    }
+
+    /**
      * Add a segment to the retransmission queue and start a timer to check if the ACK
      * timed out.
      *
