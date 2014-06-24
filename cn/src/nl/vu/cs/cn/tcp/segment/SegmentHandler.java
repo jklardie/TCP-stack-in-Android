@@ -57,8 +57,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
                         } catch (IOException e) {
                             Log.e(TAG, "Error while sending ACK. Will be retransmitted...", e);
                         }
-                        // ACKs don't have to be retransmitted
-//                        tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
 
                         return;
                     }
@@ -199,8 +197,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 } catch (IOException e) {
                     Log.e(TAG, "Error while sending ACK.. will be retried", e);
                 }
-                // ACK does not have to be retransmitted
-//                tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+
                 tcb.advanceSendNext(outSegment.getLen());
 
             } else {
@@ -278,6 +275,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
                     // This ACKs our FIN packet
 
                     // TODO: check if retransmission queue is empty. If so:
+
                     // return OK to users close call
                 } else if (tcb.getState() == TransmissionControlBlock.State.CLOSING) {
                     if(SegmentUtil.isAcked(tcb.getUnacknowledgedFin(), segment.getAck())){
@@ -333,8 +331,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
                 } catch (IOException e) {
                     Log.e(TAG, "Error while sending ACK", e);
                 }
-                // ACK does not have to be retransmitted
-//                tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
 
                 return;
             case CLOSE_WAIT:
@@ -378,8 +374,7 @@ public class SegmentHandler implements OnSegmentArriveListener {
         } catch (IOException e) {
             Log.e(TAG, "Error while sending ACK for FIN", e);
         }
-        // ACK does not have to be retransmitted
-//        tcb.addToRetransmissionQueue(new RetransmissionSegment(outSegment));
+
         tcb.advanceSendNext(outSegment.getLen());
 
         switch(tcb.getState()){

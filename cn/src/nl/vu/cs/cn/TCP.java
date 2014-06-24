@@ -357,7 +357,6 @@ public class TCP {
 
                     // stop any outstanding RECEIVEs
                     tcb.stopWaitingForDataToProcess();
-
                     return true;
                 case SYN_RECEIVED:
                     if(!sendIssued && !tcb.hasDataToTransmit()){
