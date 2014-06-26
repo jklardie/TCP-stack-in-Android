@@ -5,8 +5,7 @@ import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 import nl.vu.cs.cn.tcp.segment.Segment;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Random;
+import java.util.*;
 
 /**
  * This class ...
@@ -30,7 +29,7 @@ public class UnreliableIPStack extends IP {
     }
 
 
-    private ArrayList<StackSetting> stackSettings = new ArrayList<StackSetting>();
+    private List<StackSetting> stackSettings = Collections.synchronizedList(new ArrayList<StackSetting>());
     private int delayMs;
 
     UnreliableIPStack(int address) throws IOException {
@@ -46,7 +45,9 @@ public class UnreliableIPStack extends IP {
     }
 
     public UnreliableIPStack dropIncoming(Type type, int... num){
-        stackSettings.add(new StackSetting(type, Action.DROP, What.INCOMING, num));
+        synchronized (stackSettings) {
+            stackSettings.add(new StackSetting(type, Action.DROP, What.INCOMING, num));
+        }
         return this;
     }
 
@@ -78,28 +79,33 @@ public class UnreliableIPStack extends IP {
 
         Random rand = new Random();
 
-        for(StackSetting setting : stackSettings){
-            if(setting.num == 0){
-                // remove setting when all have been applied
-                stackSettings.remove(setting);
-            } else if(setting.what == What.OUTGOING && (setting.type == Type.ALL || setting.type == packetType)){
-                // stack setting applies to this packet (write), so use it
-                setting.num -= 1;
+        synchronized (stackSettings) {
+            Iterator iterator = stackSettings.iterator();
+            while(iterator.hasNext()){
+                StackSetting setting = (StackSetting) iterator.next();
 
-                switch(setting.action){
-                    case DROP:
-                        Log.w(TAG, "Dropping outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
-                        return -1;
-                    case CORRUPT:
-                        Log.w(TAG, "Corrupting outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
+                if (setting.num == 0) {
+                    // remove setting when all have been applied
+                    iterator.remove();
+                } else if (setting.what == What.OUTGOING && (setting.type == Type.ALL || setting.type == packetType)) {
+                    // stack setting applies to this packet (write), so use it
+                    setting.num -= 1;
 
-                        // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
-                        byte[] corruptData = new byte[10];
-                        rand.nextBytes(corruptData);
+                    switch (setting.action) {
+                        case DROP:
+                            Log.w(TAG, "Dropping outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
+                            return -1;
+                        case CORRUPT:
+                            Log.w(TAG, "Corrupting outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
 
-                        int dataOffset = Segment.HEADER_SIZE / 2;
-                        System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
-                        break;
+                            // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
+                            byte[] corruptData = new byte[10];
+                            rand.nextBytes(corruptData);
+
+                            int dataOffset = Segment.HEADER_SIZE / 2;
+                            System.arraycopy(corruptData, 0, p.data, dataOffset, corruptData.length);
+                            break;
+                    }
                 }
             }
         }
