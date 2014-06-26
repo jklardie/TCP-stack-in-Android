@@ -35,8 +35,6 @@ public class ChecksumUtil {
             sb.append(String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0'));
         }
 
-        Log.i("CHECKSUMCALC: ", sb.toString());
-
         return getOnesCompliment(packet);
     }
 
