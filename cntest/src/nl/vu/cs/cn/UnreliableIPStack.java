@@ -93,10 +93,10 @@ public class UnreliableIPStack extends IP {
 
                     switch (setting.action) {
                         case DROP:
-                            Log.w(TAG, "Dropping outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
+                            Log.e(TAG, "Dropping outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
                             return -1;
                         case CORRUPT:
-                            Log.w(TAG, "Corrupting outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
+                            Log.e(TAG, "Corrupting outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
 
                             // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
                             byte[] corruptData = new byte[10];
