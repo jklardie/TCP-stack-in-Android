@@ -68,9 +68,10 @@ public class TimeoutHandler implements OnTimeoutListener {
                     // Server performing three-way handshake, but that failed. Move state to LISTEN
                     tcb.enterState(TransmissionControlBlock.State.LISTEN);
                     break;
-
-                // TODO: Expend this list with other states
             }
+
+            // TODO: according to RFC 1122, we want to close the connection now (since something is obviously wrong)
+            tcb.enterState(TransmissionControlBlock.State.CLOSED);
         } else {
             Log.v(getTag(), "Segment " + segment.getSeq() + " was not ACKed. Retry #" + (retryNum+1));
 

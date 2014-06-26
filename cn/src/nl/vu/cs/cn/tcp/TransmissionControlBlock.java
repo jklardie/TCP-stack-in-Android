@@ -194,18 +194,18 @@ public class TransmissionControlBlock {
         try {
             int i;
             for(i=0; i<MAX_RETRANSMITS+1 && !SegmentUtil.isAcked(segment, getSendUnacknowledged()); i++){
+                Log.v(TAG, "Checking if packet is acked... " + segment.getSeq() + ":" + segment.getLastSeq());
                 try {
                     retransmissionQueueChanged.await();
                 } catch (InterruptedException e) {
                     // ignore, wait again
                 }
-                Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acknowledged? : " + SegmentUtil.isAcked(segment, getSendUnacknowledged()));
             }
 
             // either the packet has been met, or the number of retransmits have been
             // reached, and the packet did not arrive
             boolean isAcked = SegmentUtil.isAcked(segment, getSendUnacknowledged());
-            Log.v(TAG, "Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acknowledged? : " + isAcked);
+            Log.v(TAG, "[" + Thread.currentThread().getId() + "] Packet " + segment.getSeq() + ":" + segment.getLastSeq() + " acknowledged? : " + isAcked + ". SND.UNA: " + getSendUnacknowledged());
 
             return isAcked;
         } finally {

@@ -55,6 +55,9 @@ public class TestBase extends TestCase {
 
         super.tearDown();
 
+        // Allow segment receiver to stop
+        Thread.sleep(1500);
+
         Log.i(TAG, "-----------------------------");
         Log.i(TAG, "-----------------------------");
         Log.i(TAG, "-----------------------------");

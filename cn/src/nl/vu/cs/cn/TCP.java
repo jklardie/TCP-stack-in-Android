@@ -68,6 +68,7 @@ public class TCP {
      * Create a segment handler, and start new thread to receive messages
      */
     private void initSegmentReceiver(){
+        Log.d(TAG, "Starting SegmentReceiver: " + Thread.currentThread().getId());
         segmentHandler = new SegmentHandler(tcb, ip);
         segmentReceiver = new SegmentReceiver(segmentHandler, ip);
         segmentReceiver.run();
@@ -115,18 +116,20 @@ public class TCP {
                 int totalWrittenData = 0;
                 int writtenData;
                 int dataLeft = len;
+                int totalAcknowledged = 0;
                 Segment outSegment;
                 do {
                     synchronized (tcb) {
                         outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
                         writtenData = outSegment.setData(buf, offset + totalWrittenData, dataLeft);
+                        totalWrittenData += writtenData;
                         dataLeft -= writtenData;
 
                         // send data packet
                         IP.Packet packet = IPUtil.getPacket(outSegment);
                         try {
                             Log.v(TAG, "Sending: " + outSegment.toString());
-                            totalWrittenData += ip.ip_send(packet);
+                            ip.ip_send(packet);
                         } catch (IOException e) {
                             Log.e(TAG, "Error while sending data", e);
                         } finally {
@@ -140,12 +143,14 @@ public class TCP {
                     boolean acknowledged = tcb.waitForAck(outSegment);
                     if (!acknowledged) {
                         Log.w(TAG, "Segment not acknowledged. Was waiting for " + outSegment.getLastSeq() + ", but got " + tcb.getSendUnacknowledged());
-                        return -1;
+                        return totalAcknowledged;
                     }
+
+                    totalAcknowledged += writtenData;
 
                 } while (dataLeft > 0);
 
-                return totalWrittenData;
+                return totalAcknowledged;
             default:
                 Log.e(TAG, "Error in send(): connection closing");
                 return -1;

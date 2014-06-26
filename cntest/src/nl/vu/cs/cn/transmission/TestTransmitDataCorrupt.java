@@ -3,37 +3,35 @@ package nl.vu.cs.cn.transmission;
 
 import nl.vu.cs.cn.UnreliableIPStack;
 
-import java.util.Arrays;
-
 /**
  * This class ...
  *
  * @author Jeffrey Klardie
  */
-public class TestTransmitDataLoss extends TestTransmitBase {
+public class TestTransmitDataCorrupt extends TestTransmitBase {
 
-    public void testDropFirstDataOutgoing() throws Exception {
-        client.dropOutgoing(UnreliableIPStack.Type.DATA, 1);
+    public void testCorruptFirstDataOutgoing() throws Exception {
+        client.corruptOutgoing(UnreliableIPStack.Type.DATA, 1);
         doNormalTransmissionTest();
     }
 
-    public void testDropFirstDataIncoming() throws Exception {
-        server.dropIncoming(UnreliableIPStack.Type.DATA, 1);
+    public void testCorruptFirstDataIncoming() throws Exception {
+        server.corruptIncoming(UnreliableIPStack.Type.DATA, 1);
         doNormalTransmissionTest();
     }
 
-    public void testDropHalfDataOutgoing() throws Exception {
-        client.dropOutgoing(UnreliableIPStack.Type.DATA, 5);
+    public void testCorruptHalfDataOutgoing() throws Exception {
+        client.corruptOutgoing(UnreliableIPStack.Type.DATA, 5);
         doNormalTransmissionTest();
     }
 
-    public void testDropHalfDataIncoming() throws Exception {
-        server.dropIncoming(UnreliableIPStack.Type.DATA, 5);
+    public void testCorruptHalfDataIncoming() throws Exception {
+        server.corruptIncoming(UnreliableIPStack.Type.DATA, 5);
         doNormalTransmissionTest();
     }
 
-    public void testDropAllDataOutgoing() throws Exception {
-        client.dropOutgoing(UnreliableIPStack.Type.DATA);
+    public void testCorruptAllDataOutgoing() throws Exception {
+        client.corruptOutgoing(UnreliableIPStack.Type.DATA);
         startServer(new ServerRunnable());
 
         connect();
@@ -46,8 +44,8 @@ public class TestTransmitDataLoss extends TestTransmitBase {
         clientSocket.close();
     }
 
-    public void testDropAllDataIncoming() throws Exception {
-        server.dropIncoming(UnreliableIPStack.Type.DATA);
+    public void testCorruptAllDataIncoming() throws Exception {
+        server.corruptIncoming(UnreliableIPStack.Type.DATA);
         startServer(new ServerRunnable());
 
         connect();
