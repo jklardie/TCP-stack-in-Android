@@ -94,7 +94,7 @@ public class UnreliableIPStack extends IP {
                     switch (setting.action) {
                         case DROP:
                             Log.e(TAG, "Dropping outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
-                            return -1;
+                            return 0;
                         case CORRUPT:
                             Log.e(TAG, "Corrupting outgoing " + setting.type + " segment. SEQ: " + segment.getSeq());
 
@@ -151,11 +151,11 @@ public class UnreliableIPStack extends IP {
 
                 switch(setting.action){
                     case DROP:
-                        Log.w(TAG, "Dropping incoming " + setting.type + " segment. SEQ: " + segment.getSeq());
+                        Log.e(TAG, "Dropping incoming " + setting.type + " segment. SEQ: " + segment.getSeq());
                         p.data = null;
                         break;
                     case CORRUPT:
-                        Log.w(TAG, "Corrupting incoming " + setting.type + " segment. SEQ: " + segment.getSeq());
+                        Log.e(TAG, "Corrupting incoming " + setting.type + " segment. SEQ: " + segment.getSeq());
 
                         // note, we don't want to corrupt the header, only the data (otherwise the packet might not arrive)
                         byte[] corruptData = new byte[10];
@@ -202,7 +202,7 @@ public class UnreliableIPStack extends IP {
             if(num.length > 0) {
                 this.num = num[0];
             } else {
-                this.num = TransmissionControlBlock.MAX_RETRANSMITS + 1;    // mess up all packets, none will arrive correctly
+                this.num = Integer.MAX_VALUE;    // mess up all packets, none will arrive correctly
             }
         }
 

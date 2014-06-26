@@ -121,13 +121,12 @@ public class TCP {
                         outSegment = SegmentUtil.getPacket(tcb, tcb.getSendNext(), tcb.getReceiveNext());
                         writtenData = outSegment.setData(buf, offset + totalWrittenData, dataLeft);
                         dataLeft -= writtenData;
-                        totalWrittenData += writtenData;
 
                         // send data packet
                         IP.Packet packet = IPUtil.getPacket(outSegment);
                         try {
                             Log.v(TAG, "Sending: " + outSegment.toString());
-                            ip.ip_send(packet);
+                            totalWrittenData += ip.ip_send(packet);
                         } catch (IOException e) {
                             Log.e(TAG, "Error while sending data", e);
                         } finally {
