@@ -1,4 +1,4 @@
-package nl.vu.cs.cn;
+package nl.vu.cs.cn.window;
 
 import junit.framework.TestCase;
 
