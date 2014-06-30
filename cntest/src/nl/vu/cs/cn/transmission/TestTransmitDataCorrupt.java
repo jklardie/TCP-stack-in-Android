@@ -3,6 +3,8 @@ package nl.vu.cs.cn.transmission;
 
 import nl.vu.cs.cn.UnreliableIPStack;
 
+import java.util.ArrayList;
+
 /**
  * This class ...
  *
@@ -36,10 +38,9 @@ public class TestTransmitDataCorrupt extends TestTransmitBase {
 
         connect();
 
-        for(byte[] buf : data){
-            int bytesSent = clientSocket.write(buf, 0, buf.length);
-            assertEquals("Expected no data to be sent", 0, bytesSent);
-        }
+        byte[] buf  = data[0];
+        int bytesSent = clientSocket.write(buf, 0, buf.length);
+        assertTrue("Expected no data to be sent", bytesSent == 0 || bytesSent == -1);
 
         clientSocket.close();
     }
@@ -50,10 +51,9 @@ public class TestTransmitDataCorrupt extends TestTransmitBase {
 
         connect();
 
-        for(byte[] buf : data){
-            int bytesSent = clientSocket.write(buf, 0, buf.length);
-            assertEquals("Expected no data to be sent", 0, bytesSent);
-        }
+        byte[] buf = data[0];
+        int bytesSent = clientSocket.write(buf, 0, buf.length);
+        assertTrue("Expected no data to be sent", bytesSent == 0 || bytesSent == -1);
 
         clientSocket.close();
     }

@@ -55,8 +55,8 @@ public class TestConnectAckCorrupt extends TestConnect {
         // wait for server (client will retry 10 times)
         Thread.sleep(6000);
 
-        assertEquals("Server never received ACK, should be reset to LISTEN",
-                TransmissionControlBlock.State.LISTEN,
+        assertEquals("Server never received ACK, should be reset to CLOSED",
+                TransmissionControlBlock.State.CLOSED,
                 getServerState());
     }
 

@@ -48,8 +48,8 @@ public class TestConnectSynAckCorrupt extends TestConnect {
         // Wait 1 second, so both have time to set states correctly
         Thread.sleep(1000);
 
-        assertEquals("Server never received ACK, should be reset to LISTEN",
-                TransmissionControlBlock.State.LISTEN,
+        assertEquals("Server never received ACK, should be reset to CLOSED",
+                TransmissionControlBlock.State.CLOSED,
                 getServerState());
     }
 
