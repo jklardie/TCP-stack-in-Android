@@ -118,6 +118,8 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
             // TODO: queue any other control or text for processing later (actually, can SYN contain data?).
 
+            tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
+
             // Send SYN,ACK segment <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
             long iss = tcb.getInitialSendSequenceNumber();
             Segment outSegment = SegmentUtil.getSYNACKPacket(tcb, iss, tcb.getReceiveNext());
@@ -135,8 +137,6 @@ public class SegmentHandler implements OnSegmentArriveListener {
 
             // initial packet so set snd_una
             tcb.setSendUnacknowledged(iss);
-
-            tcb.enterState(TransmissionControlBlock.State.SYN_RECEIVED);
         } else {
             // Any control- or text-bearing segment must have an ack, and would be
             // handled by the isAck() check. This situation is unexpected, but can be ignored.
