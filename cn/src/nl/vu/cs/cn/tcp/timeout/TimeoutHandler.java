@@ -78,7 +78,8 @@ public class TimeoutHandler implements OnTimeoutListener {
 
             IP.Packet packet = IPUtil.getPacket(segment);
             try {
-                ip.ip_send(packet);
+                int bytesSent = ip.ip_send(packet);
+                Log.v(getTag(), "Resent " + bytesSent + " bytes.");
             } catch (IOException e) {
                 // if an error occurs set a timer again and retry afterwards
                 Log.w(getTag(), "Error while resending packet", e);
