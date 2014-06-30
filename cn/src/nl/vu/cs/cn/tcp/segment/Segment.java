@@ -1,7 +1,5 @@
 package nl.vu.cs.cn.tcp.segment;
 
-import android.util.Log;
-
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;

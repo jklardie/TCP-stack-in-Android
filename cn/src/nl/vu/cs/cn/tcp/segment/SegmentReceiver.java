@@ -1,11 +1,9 @@
 package nl.vu.cs.cn.tcp.segment;
 
 
-import android.util.Log;
-import junit.framework.Assert;
 import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.Log;
 
-import java.util.ArrayList;
 
 public class SegmentReceiver {
 

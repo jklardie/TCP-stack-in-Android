@@ -5,7 +5,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -16,6 +15,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import nl.vu.cs.cn.IP;
+import nl.vu.cs.cn.Log;
 import nl.vu.cs.cn.R;
 import nl.vu.cs.cn.TCP;
 

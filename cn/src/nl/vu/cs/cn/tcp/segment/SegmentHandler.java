@@ -1,11 +1,10 @@
 package nl.vu.cs.cn.tcp.segment;
 
-import android.util.Log;
-
 import java.io.IOException;
 
 import nl.vu.cs.cn.IP;
 import nl.vu.cs.cn.IPUtil;
+import nl.vu.cs.cn.Log;
 import nl.vu.cs.cn.tcp.TransmissionControlBlock;
 
 public class SegmentHandler implements OnSegmentArriveListener {

@@ -2,7 +2,6 @@ package nl.vu.cs.cn.tcp;
 
 import java.nio.ByteBuffer;
 
-import android.util.Log;
 import nl.vu.cs.cn.IP;
 
 public class ChecksumUtil {

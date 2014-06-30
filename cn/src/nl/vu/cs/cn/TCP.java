@@ -1,7 +1,5 @@
 package nl.vu.cs.cn;
 
-import android.util.Log;
-
 import java.io.IOException;
 
 import nl.vu.cs.cn.IP.IpAddress;
