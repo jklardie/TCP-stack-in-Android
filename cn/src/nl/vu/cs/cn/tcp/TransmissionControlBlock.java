@@ -26,7 +26,7 @@ import nl.vu.cs.cn.tcp.timeout.TimeoutHandler;
  */
 public class TransmissionControlBlock {
 
-    private static final int RETRANSMIT_TIMEOUT_SEC = 1;    // number of time before retransmit
+    private static final int RETRANSMIT_TIMEOUT_MS = 1000;    // number of time before retransmit
     public static final int MAX_RETRANSMITS = 10;           // maximum number of retransmits
     public static final int TIME_WAIT_TIMEOUT_SEC = 5;     // number of time TIME WAIT should wait before entering CLOSE
 
@@ -583,7 +583,7 @@ public class TransmissionControlBlock {
                 public void run() {
                     timeoutHandler.onRetransmissionTimeout(retransmissionSegment);
                 }
-            }, RETRANSMIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+            }, RETRANSMIT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
             retransmissionMap.put(retransmissionSegment, task);
         }
